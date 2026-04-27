@@ -1,0 +1,11 @@
+[workspace]
+members = [
+	"domain",
+	"server",
+	"application",
+	"clients/desktop",
+]
+resolver = "2"
+
+[workspace.dependencies]
+domain = { path = "domain" }
