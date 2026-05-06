@@ -13,3 +13,4 @@ eframe = { version = "0.29", default-features = false, features = [
     "wgpu",
     "wayland",
 ] }
+automerge = { workspace = true }
