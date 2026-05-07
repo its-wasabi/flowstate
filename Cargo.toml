@@ -1,6 +1,5 @@
 [workspace]
 members = [
-	"domain",
 	"server",
 	"application",
 	"clients/desktop",
@@ -8,7 +7,7 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-domain = { path = "domain" }
+application = { path = "application" }
 
 tokio         = { version = "1", features = ["full"] }
 tokio-tungstenite = "0.29.0"
