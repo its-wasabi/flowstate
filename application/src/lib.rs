@@ -8,43 +8,31 @@
 #![allow(unused)]
 #![allow(clippy::missing_errors_doc)]
 
+pub mod network;
 pub mod storage;
 
 pub const APP_NAME: &str = "flowstate";
 
 #[derive(Debug)]
 pub struct App {
-    storage: storage::Storage,
-    document: Document,
-}
+    pub storage: storage::Storage,
+    pub network: network::Network,
 
-#[derive(Debug, Default)]
-pub struct Document(std::cell::RefCell<automerge::AutoCommit>);
-
-impl storage::Storable for Document {
-    fn file_name() -> &'static str {
-        "document.bin"
-    }
-
-    fn storage_type() -> storage::StorageType {
-        storage::StorageType::Data
-    }
-
-    fn into_bytes(&self) -> Vec<u8> {
-        self.0.borrow_mut().save()
-    }
-
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(Self(std::cell::RefCell::new(automerge::AutoCommit::load(
-            bytes,
-        )?)))
-    }
+    pub document: automerge::AutoCommit,
 }
 
 impl App {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let storage = storage::Storage::new()?;
-        let document = storage.load_or_create()?;
-        Ok(Self { storage, document })
+        let mut document = storage.load_or_default()?;
+
+        let server_socket = std::net::SocketAddr::new([127, 0, 0, 1].into(), 8080);
+        let network = network::Network::new(&mut document, server_socket)?;
+
+        Ok(Self {
+            storage,
+            network,
+            document,
+        })
     }
 }

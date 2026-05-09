@@ -1,6 +1,5 @@
-pub mod config;
-pub mod data;
 pub mod paths;
+pub mod storable;
 
 #[derive(Debug)]
 pub struct Storage {
@@ -10,13 +9,6 @@ pub struct Storage {
 pub enum StorageType {
     Config,
     Data,
-}
-
-pub trait Storable: Sized {
-    fn storage_type() -> StorageType;
-    fn file_name() -> &'static str;
-    fn into_bytes(&self) -> Vec<u8>;
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>>;
 }
 
 /// This block is responsible for disk io
@@ -36,9 +28,9 @@ impl Storage {
 }
 
 impl Storage {
-    pub fn load_or_create<T>(&self) -> Result<T, Box<dyn std::error::Error>>
+    pub fn load_or_default<T>(&self) -> Result<T, Box<dyn std::error::Error>>
     where
-        T: Storable + Default,
+        T: storable::Storable + Default,
     {
         let path = match T::storage_type() {
             StorageType::Config => self.paths.app_config_dir.join(T::file_name()),
@@ -54,16 +46,16 @@ impl Storage {
         Ok(data)
     }
 
-    pub fn save<T>(&mut self, data: &mut T) -> std::io::Result<()>
+    pub fn store<T>(&self, data: &mut T) -> std::io::Result<()>
     where
-        T: Storable,
+        T: storable::Storable,
     {
         let path = match T::storage_type() {
             StorageType::Config => self.paths.app_config_dir.join(T::file_name()),
             StorageType::Data => self.paths.app_data_dir.join(T::file_name()),
         };
 
-        let bytes = data.into_bytes();
+        let bytes = data.as_bytes();
         std::fs::write(path, bytes)?;
         Ok(())
     }
