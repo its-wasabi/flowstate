@@ -1,22 +1,89 @@
-use std::io::Write;
+mod chart;
 
-use application::App;
-use automerge::{ObjId, transaction::Transactable};
+struct App {
+    core: application::Core,
+}
+
+impl App {
+    fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self {
+            core: application::Core::new()?,
+        })
+    }
+}
+
+impl eframe::App for App {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        ui.horizontal(|ui| {
+            ui.label(egui::RichText::new("HELLO").strong().size(28.0));
+            if ui.button("SAVE").clicked() {
+                _ = self.core.save();
+            }
+        });
+
+        let chart = chart::line2diff::ChartLine2diff::new(
+            "idk",
+            &[
+                [0.0, 12.0],
+                [1.0, 11.0],
+                [2.0, 13.0],
+                [3.0, 14.0],
+                [4.0, 18.0],
+                [5.0, 21.0],
+                [6.0, 23.0],
+                [7.0, 24.0],
+            ],
+            &[
+                [0.0, 1.0],
+                [1.0, 1.0],
+                [2.0, 12.0],
+                [3.0, 12.0],
+                [4.0, 12.0],
+                [5.0, 11.0],
+                [6.0, 13.0],
+                [7.0, 14.0],
+            ],
+        );
+        let chart2 = chart::line2diff::ChartLine2diff::new(
+            "idk2",
+            &[
+                [0.0, 12.0],
+                [1.0, 11.0],
+                [2.0, 13.0],
+                [3.0, 14.0],
+                [4.0, 18.0],
+                [5.0, 21.0],
+                [6.0, 23.0],
+                [7.0, 24.0],
+            ],
+            &[
+                [0.0, 1.0],
+                [1.0, 1.0],
+                [2.0, 12.0],
+                [3.0, 12.0],
+                [4.0, 12.0],
+                [5.0, 11.0],
+                [6.0, 13.0],
+                [7.0, 14.0],
+            ],
+        );
+
+        ui.columns(2, |cols| {
+            chart.show_plot(&mut cols[0]);
+            chart2.show_plot(&mut cols[1]);
+        });
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut app = App::new()?;
+    let app = App::new()?;
 
-    _ = app
-        .document
-        .put_object(ObjId::Root, "x", automerge::ObjType::Map);
-
-    let mut count = 0;
-    loop {
-        println!(" -={count}=- ");
-        count += 1;
-
-        _ = app.network.sync(&mut app.document);
-        _ = app.storage.store(&mut app.document);
-        std::thread::sleep(std::time::Duration::from_secs_f32(0.8));
-    }
+    Ok(eframe::run_native(
+        application::APP_NAME,
+        eframe::NativeOptions {
+            viewport: egui::ViewportBuilder::default().with_title(application::APP_NAME),
+            ..Default::default()
+        },
+        Box::new(|_cc| Ok(Box::new(app) as _)),
+    )?)
 }
