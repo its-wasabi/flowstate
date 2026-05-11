@@ -1,10 +1,17 @@
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StorageKind {
+    Config,
+    Data,
+}
+
+#[derive(Debug, Clone)]
 pub struct Paths {
     pub app_data_dir: std::path::PathBuf,
     pub app_config_dir: std::path::PathBuf,
 }
 
 impl Paths {
+    #[must_use]
     pub fn new() -> Option<Self> {
         let app_data_dir = dirs::data_local_dir()?;
         let app_data_dir = app_data_dir.join(crate::APP_NAME);
@@ -16,5 +23,16 @@ impl Paths {
             app_data_dir,
             app_config_dir,
         })
+    }
+
+    pub(super) fn resolve_path(
+        &self,
+        path_suffix: &str,
+        storage_kind: StorageKind,
+    ) -> std::path::PathBuf {
+        match storage_kind {
+            StorageKind::Config => self.app_config_dir.join(path_suffix),
+            StorageKind::Data => self.app_data_dir.join(path_suffix),
+        }
     }
 }

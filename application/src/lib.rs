@@ -8,23 +8,32 @@
 #![allow(unused)]
 #![allow(clippy::missing_errors_doc)]
 
+pub mod config;
 pub mod network;
 pub mod storage;
 
 pub const APP_NAME: &str = "flowstate";
 
-#[derive(Debug)]
-pub struct App {
-    pub storage: storage::Storage,
-    pub network: network::Network,
+const DOCUMENT_SAVE_PATH: &str = "document.bin";
+const CONFIG_SAVE_PATH: &str = "config.json";
 
-    pub document: automerge::AutoCommit,
+#[derive(Debug)]
+pub struct Core {
+    storage: storage::Storage,
+    network: network::Network,
+
+    config: config::Config,
+    document: automerge::AutoCommit,
+    runtime: tokio::runtime::Runtime,
 }
 
-impl App {
+impl Core {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let storage = storage::Storage::new()?;
-        let mut document = storage.load_or_default()?;
+        let runtime = tokio::runtime::Runtime::new()?;
+        let storage = storage::Storage::new(runtime.handle().clone())?;
+        let config = storage.load_or_default("config.json", storage::paths::StorageKind::Config)?;
+        let mut document =
+            storage.load_or_default("document.bin", storage::paths::StorageKind::Data)?;
 
         let server_socket = std::net::SocketAddr::new([127, 0, 0, 1].into(), 8080);
         let network = network::Network::new(&mut document, server_socket)?;
@@ -32,7 +41,31 @@ impl App {
         Ok(Self {
             storage,
             network,
+            config,
             document,
+            runtime,
         })
+    }
+
+    pub fn save(&mut self) -> serde_json::Result<()> {
+        self.storage.save(
+            DOCUMENT_SAVE_PATH,
+            storage::paths::StorageKind::Data,
+            self.document.save(),
+        );
+
+        self.storage.save(
+            CONFIG_SAVE_PATH,
+            storage::paths::StorageKind::Config,
+            self.config.as_bytes()?,
+        );
+
+        Ok(())
+    }
+}
+
+impl Drop for Core {
+    fn drop(&mut self) {
+        self.storage.flush();
     }
 }
