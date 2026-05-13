@@ -1,3 +1,7 @@
+// TODO: Path resolution
+// 1. Look into the config file for paths
+// 2. If some path is not specified in the config file check env and add that to the config file
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StorageKind {
     Config,

@@ -10,22 +10,23 @@
 
 pub mod analytics;
 pub mod config;
-pub mod network;
+pub mod error;
+pub mod peer;
 pub mod storage;
+pub mod trees;
 
 pub const APP_NAME: &str = "flowstate";
 
-const DOCUMENT_SAVE_PATH: &str = "document.bin";
+const DOCUMENT_SAVE_PATH: &str = "data.bin";
 const CONFIG_SAVE_PATH: &str = "config.json";
 
 #[derive(Debug)]
 pub struct Core {
-    storage: storage::Storage,
-    network: Option<network::Network>,
-
-    config: config::Config,
-    document: automerge::AutoCommit,
     runtime: tokio::runtime::Runtime,
+    storage: storage::Storage,
+    config: config::Config,
+    sync: peer::Peer,
+    tree: trees::Trees,
 }
 
 impl Core {
@@ -34,22 +35,18 @@ impl Core {
         let storage = storage::Storage::new(runtime.handle().clone())?;
 
         let config: config::Config =
-            storage.load_or_default("config.json", storage::paths::StorageKind::Config)?;
-        let mut document: automerge::AutoCommit =
-            storage.load_or_default("document.bin", storage::paths::StorageKind::Data)?;
+            storage.load_or_default(CONFIG_SAVE_PATH, storage::paths::StorageKind::Config)?;
+        let mut tree: trees::Trees =
+            storage.load_or_default(DOCUMENT_SAVE_PATH, storage::paths::StorageKind::Data)?;
 
-        let network = if let Some(server_socket) = config.server_socket {
-            Some(network::Network::new(&mut document, server_socket)?)
-        } else {
-            None
-        };
+        let sync = peer::Peer::new(&mut tree.document, config.server_socket)?;
 
         Ok(Self {
-            storage,
-            network,
-            config,
-            document,
             runtime,
+            storage,
+            config,
+            sync,
+            tree,
         })
     }
 
@@ -57,7 +54,7 @@ impl Core {
         self.storage.save(
             DOCUMENT_SAVE_PATH,
             storage::paths::StorageKind::Data,
-            self.document.save(),
+            self.tree.document.save(),
         );
 
         self.storage.save(
@@ -67,6 +64,10 @@ impl Core {
         );
 
         Ok(())
+    }
+
+    pub fn sync(&mut self) {
+        self.sync.sync(&mut self.tree.document);
     }
 }
 
