@@ -19,119 +19,97 @@ const LABEL_DIST: f64 = 0.4; // distance from intersection dot to its number lab
 const LABEL_SIZE: f32 = 16.0;
 const DOT_RADIUS: f32 = 5.0;
 
-fn smooth(pts: &[[f64; 2]]) -> Vec<[f64; 2]> {
-    if pts.len() < 2 {
-        return pts.to_vec();
-    }
-    let n = pts.len();
-    let mut out = Vec::with_capacity((n - 1) * SMOOTH_STEPS + 1);
-    for i in 0..n - 1 {
-        let p0 = pts[i.saturating_sub(1)];
-        let p1 = pts[i];
-        let p2 = pts[i + 1];
-        let p3 = pts[(i + 2).min(n - 1)];
-        for s in 0..SMOOTH_STEPS {
-            let t = s as f64 / SMOOTH_STEPS as f64;
-            let t2 = t * t;
-            let t3 = t2 * t;
-            let cr = |a: f64, b: f64, c: f64, d: f64| {
-                0.5 * ((2.0 * b)
-                    + (-a + c) * t
-                    + (2.0 * a - 5.0 * b + 4.0 * c - d) * t2
-                    + (-a + 3.0 * b - 3.0 * c + d) * t3)
-            };
-            out.push([
-                cr(p0[0], p1[0], p2[0], p3[0]),
-                cr(p0[1], p1[1], p2[1], p3[1]),
-            ]);
-        }
-    }
-    out.push(*pts.last().unwrap());
-    out
-}
-
-fn visible_slice<'a>(data: &'a [[f64; 2]], x_min: f64, x_max: f64) -> &'a [[f64; 2]] {
-    let start = data.partition_point(|p| p[0] < x_min);
-    let end = data.partition_point(|p| p[0] <= x_max);
-
-    let start = start.saturating_sub(2); // 👈 IMPORTANT CONTEXT BUFFER
-    let end = (end + 2).min(data.len()); // 👈 IMPORTANT CONTEXT BUFFER
-
-    &data[start..end]
-}
-
-fn sample(curve: &[[f64; 2]], x: f64) -> Option<f64> {
-    curve.windows(2).find_map(|w| {
-        let (x0, y0) = (w[0][0], w[0][1]);
-        let (x1, y1) = (w[1][0], w[1][1]);
-        (x >= x0 && x <= x1).then(|| ((x - x0) / (x1 - x0)).mul_add(y1 - y0, y0))
-    })
-}
-
-// fn sample_raw(data: &[[f64; 2]], x: f64) -> Option<f64> {
-//     let i = data.partition_point(|p| p[0] < x);
-//
-//     if i == 0 || i >= data.len() {
-//         return None;
+// fn smooth(pts: &[(f64, f64)]) -> Vec<(f64, f64)> {
+//     if pts.len() < 2 {
+//         return pts.to_vec();
 //     }
-//
-//     let (x0, y0) = data[i - 1];
-//     let (x1, y1) = data[i];
-//
-//     let t = (x - x0) / (x1 - x0);
-//     Some(y0 + t * (y1 - y0))
+//     let n = pts.len();
+//     let mut out = Vec::with_capacity((n - 1) * SMOOTH_STEPS + 1);
+//     for i in 0..n - 1 {
+//         let p0 = pts[i.saturating_sub(1)];
+//         let p1 = pts[i];
+//         let p2 = pts[i + 1];
+//         let p3 = pts[(i + 2).min(n - 1)];
+//         for s in 0..SMOOTH_STEPS {
+//             let t = s as f64 / SMOOTH_STEPS as f64;
+//             let t2 = t * t;
+//             let t3 = t2 * t;
+//             let cr = |a: f64, b: f64, c: f64, d: f64| {
+//                 0.5 * ((2.0 * b)
+//                     + (-a + c) * t
+//                     + (2.0 * a - 5.0 * b + 4.0 * c - d) * t2
+//                     + (-a + 3.0 * b - 3.0 * c + d) * t3)
+//             };
+//             out.push((cr(p0.0, p1.0, p2.0, p3.0), cr(p0.1, p1.1, p2.1, p3.1)));
+//         }
+//     }
+//     out.push(*pts.last().unwrap());
+//     out
 // }
-
-fn segmented_vline(
-    plot_ui: &mut egui_plot::PlotUi,
-    x: f64,
-    y_min: f64,
-    y_max: f64,
-    gaps: &mut [(f64, f64)],
-    color: egui::Color32,
-) {
-    gaps.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
-
-    let draw = |plot_ui: &mut egui_plot::PlotUi, tag: &str, y0: f64, y1: f64| {
-        if y1 - y0 > VLINE_MIN_SEG {
-            plot_ui.line(
-                egui_plot::Line::new(tag, egui_plot::PlotPoints::from(vec![[x, y0], [x, y1]]))
-                    .color(color)
-                    .width(VLINE_WIDTH)
-                    .allow_hover(false),
-            );
-        }
-    };
-
-    let mut cursor = y_min;
-    for (i, &(gap_lo, gap_hi)) in gaps.iter().enumerate() {
-        draw(
-            plot_ui,
-            &format!("_vl{i}"),
-            cursor,
-            gap_lo.clamp(y_min, y_max),
-        );
-        cursor = cursor.max(gap_hi.clamp(y_min, y_max));
-    }
-    draw(plot_ui, "_vl_end", cursor, y_max);
-}
-
-fn plot_horizontal_bound(plot_ui: &mut egui_plot::PlotUi, line_x_min: f64, line_x_max: f64) {
-    let bounds = plot_ui.plot_bounds();
-    let view_x_range = bounds.max()[0] - bounds.min()[0];
-
-    if view_x_range > line_x_max - line_x_min {
-        plot_ui.set_plot_bounds(egui_plot::PlotBounds::from_min_max(
-            [line_x_min, bounds.min()[1]],
-            [line_x_max, bounds.max()[1]],
-        ));
-    } else {
-        let new_min = bounds.min()[0].clamp(line_x_min, line_x_max - view_x_range);
-        if (new_min - bounds.min()[0]).abs() > f64::EPSILON {
-            plot_ui.set_plot_bounds(egui_plot::PlotBounds::from_min_max(
-                [new_min, bounds.min()[1]],
-                [new_min + view_x_range, bounds.max()[1]],
-            ));
-        }
-    }
-}
+//
+// fn visible_slice<'a>(data: &'a [(f64, f64)], x: MinMax<f64>) -> &'a [(f64, f64)] {
+//     let start = data.partition_point(|p| p.0 < x.min);
+//     let end = data.partition_point(|p| p.0 <= x.max);
+//
+//     let start = start.saturating_sub(2);
+//     let end = (end + 2).min(data.len());
+//
+//     &data[start..end]
+// }
+//
+// fn sample(curve: &[[f64; 2]], x: f64) -> Option<f64> {
+//     curve.windows(2).find_map(|w| {
+//         let (x0, y0) = (w[0][0], w[0][1]);
+//         let (x1, y1) = (w[1][0], w[1][1]);
+//         (x >= x0 && x <= x1).then(|| ((x - x0) / (x1 - x0)).mul_add(y1 - y0, y0))
+//     })
+// }
+//
+// // fn sample_raw(data: &[[f64; 2]], x: f64) -> Option<f64> {
+// //     let i = data.partition_point(|p| p[0] < x);
+// //
+// //     if i == 0 || i >= data.len() {
+// //         return None;
+// //     }
+// //
+// //     let (x0, y0) = data[i - 1];
+// //     let (x1, y1) = data[i];
+// //
+// //     let t = (x - x0) / (x1 - x0);
+// //     Some(y0 + t * (y1 - y0))
+// // }
+//
+// fn segmented_vline(
+//     plot_ui: &mut egui_plot::PlotUi,
+//     x: f64,
+//     y_min: f64,
+//     y_max: f64,
+//     gaps: &mut [(f64, f64)],
+//     color: egui::Color32,
+// ) {
+//     gaps.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+//
+//     let draw = |plot_ui: &mut egui_plot::PlotUi, tag: &str, y0: f64, y1: f64| {
+//         if y1 - y0 > VLINE_MIN_SEG {
+//             plot_ui.line(
+//                 egui_plot::Line::new(tag, egui_plot::PlotPoints::from(vec![[x, y0], [x, y1]]))
+//                     .color(color)
+//                     .width(VLINE_WIDTH)
+//                     .allow_hover(false),
+//             );
+//         }
+//     };
+//
+//     let mut cursor = y_min;
+//     for (i, &(gap_lo, gap_hi)) in gaps.iter().enumerate() {
+//         draw(
+//             plot_ui,
+//             &format!("_vl{i}"),
+//             cursor,
+//             gap_lo.clamp(y_min, y_max),
+//         );
+//         cursor = cursor.max(gap_hi.clamp(y_min, y_max));
+//     }
+//     draw(plot_ui, "_vl_end", cursor, y_max);
+// }
+//

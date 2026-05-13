@@ -24,53 +24,59 @@ impl eframe::App for App {
         let chart = chart::line2diff::ChartLine2diff::new(
             "idk",
             &[
-                [0.0, 12.0],
-                [1.0, 11.0],
-                [2.0, 13.0],
-                [3.0, 14.0],
-                [4.0, 18.0],
-                [5.0, 21.0],
-                [6.0, 23.0],
-                [7.0, 24.0],
+                application::analytics::Point([0.0, 0.0]),
+                application::analytics::Point([1.0, 3.0]),
+                application::analytics::Point([2.0, 12.0]),
+                application::analytics::Point([3.0, 13.0]),
+                application::analytics::Point([4.0, 14.0]),
+                application::analytics::Point([5.0, 14.0]),
+                application::analytics::Point([6.0, 14.0]),
+                application::analytics::Point([7.0, 20.0]),
             ],
             &[
-                [0.0, 1.0],
-                [1.0, 1.0],
-                [2.0, 12.0],
-                [3.0, 12.0],
-                [4.0, 12.0],
-                [5.0, 11.0],
-                [6.0, 13.0],
-                [7.0, 14.0],
+                application::analytics::Point([0.0, 0.0]),
+                application::analytics::Point([1.0, 2.0]),
+                application::analytics::Point([2.0, 8.0]),
+                application::analytics::Point([3.0, 8.0]),
+                application::analytics::Point([4.0, 8.0]),
+                application::analytics::Point([5.0, 9.0]),
+                application::analytics::Point([6.0, 9.0]),
+                application::analytics::Point([7.0, 10.0]),
             ],
         );
         let chart2 = chart::line2diff::ChartLine2diff::new(
             "idk2",
             &[
-                [0.0, 12.0],
-                [1.0, 11.0],
-                [2.0, 13.0],
-                [3.0, 14.0],
-                [4.0, 18.0],
-                [5.0, 21.0],
-                [6.0, 23.0],
-                [7.0, 24.0],
+                application::analytics::Point([0.0, 0.0]),
+                application::analytics::Point([1.0, 3.0]),
+                application::analytics::Point([2.0, 12.0]),
+                application::analytics::Point([3.0, 13.0]),
+                application::analytics::Point([4.0, 14.0]),
+                application::analytics::Point([5.0, 14.0]),
+                application::analytics::Point([6.0, 14.0]),
+                application::analytics::Point([7.0, 20.0]),
             ],
             &[
-                [0.0, 1.0],
-                [1.0, 1.0],
-                [2.0, 12.0],
-                [3.0, 12.0],
-                [4.0, 12.0],
-                [5.0, 11.0],
-                [6.0, 13.0],
-                [7.0, 14.0],
+                application::analytics::Point([0.0, 0.0]),
+                application::analytics::Point([1.0, 2.0]),
+                application::analytics::Point([2.0, 8.0]),
+                application::analytics::Point([3.0, 8.0]),
+                application::analytics::Point([4.0, 8.0]),
+                application::analytics::Point([5.0, 9.0]),
+                application::analytics::Point([6.0, 9.0]),
+                application::analytics::Point([7.0, 10.0]),
             ],
         );
 
-        ui.columns(2, |cols| {
-            chart.show_plot(&mut cols[0]);
-            chart2.show_plot(&mut cols[1]);
+        let height = 300.0;
+        let available_size = ui.available_size_before_wrap();
+        let size = egui::vec2(available_size.x, height);
+
+        ui.allocate_ui_with_layout(size, egui::Layout::top_down(egui::Align::Min), |ui| {
+            ui.columns(2, |cols| {
+                chart.show_plot(&mut cols[0]);
+                chart2.show_plot(&mut cols[1]);
+            });
         });
     }
 }

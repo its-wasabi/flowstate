@@ -8,6 +8,7 @@
 #![allow(unused)]
 #![allow(clippy::missing_errors_doc)]
 
+pub mod analytics;
 pub mod config;
 pub mod network;
 pub mod storage;
@@ -20,7 +21,7 @@ const CONFIG_SAVE_PATH: &str = "config.json";
 #[derive(Debug)]
 pub struct Core {
     storage: storage::Storage,
-    network: network::Network,
+    network: Option<network::Network>,
 
     config: config::Config,
     document: automerge::AutoCommit,
@@ -31,12 +32,17 @@ impl Core {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let runtime = tokio::runtime::Runtime::new()?;
         let storage = storage::Storage::new(runtime.handle().clone())?;
-        let config = storage.load_or_default("config.json", storage::paths::StorageKind::Config)?;
-        let mut document =
+
+        let config: config::Config =
+            storage.load_or_default("config.json", storage::paths::StorageKind::Config)?;
+        let mut document: automerge::AutoCommit =
             storage.load_or_default("document.bin", storage::paths::StorageKind::Data)?;
 
-        let server_socket = std::net::SocketAddr::new([127, 0, 0, 1].into(), 8080);
-        let network = network::Network::new(&mut document, server_socket)?;
+        let network = if let Some(server_socket) = config.server_socket {
+            Some(network::Network::new(&mut document, server_socket)?)
+        } else {
+            None
+        };
 
         Ok(Self {
             storage,
