@@ -21,68 +21,73 @@ impl eframe::App for App {
             }
         });
 
-        let chart = chart::line2diff::ChartLine2diff::new(
-            "idk",
-            &[
-                application::analytics::Point([0.0, 0.0]),
-                application::analytics::Point([1.0, 3.0]),
-                application::analytics::Point([2.0, 12.0]),
-                application::analytics::Point([3.0, 13.0]),
-                application::analytics::Point([4.0, 14.0]),
-                application::analytics::Point([5.0, 14.0]),
-                application::analytics::Point([6.0, 14.0]),
-                application::analytics::Point([7.0, 20.0]),
-            ],
-            &[
-                application::analytics::Point([0.0, 0.0]),
-                application::analytics::Point([1.0, 2.0]),
-                application::analytics::Point([2.0, 8.0]),
-                application::analytics::Point([3.0, 8.0]),
-                application::analytics::Point([4.0, 8.0]),
-                application::analytics::Point([5.0, 9.0]),
-                application::analytics::Point([6.0, 9.0]),
-                application::analytics::Point([7.0, 10.0]),
-            ],
-        );
-        let chart2 = chart::line2diff::ChartLine2diff::new(
-            "idk2",
-            &[
-                application::analytics::Point([0.0, 0.0]),
-                application::analytics::Point([1.0, 3.0]),
-                application::analytics::Point([2.0, 12.0]),
-                application::analytics::Point([3.0, 13.0]),
-                application::analytics::Point([4.0, 14.0]),
-                application::analytics::Point([5.0, 14.0]),
-                application::analytics::Point([6.0, 14.0]),
-                application::analytics::Point([7.0, 20.0]),
-            ],
-            &[
-                application::analytics::Point([0.0, 0.0]),
-                application::analytics::Point([1.0, 2.0]),
-                application::analytics::Point([2.0, 8.0]),
-                application::analytics::Point([3.0, 8.0]),
-                application::analytics::Point([4.0, 8.0]),
-                application::analytics::Point([5.0, 9.0]),
-                application::analytics::Point([6.0, 9.0]),
-                application::analytics::Point([7.0, 10.0]),
-            ],
-        );
-
-        let height = 300.0;
-        let available_size = ui.available_size_before_wrap();
-        let size = egui::vec2(available_size.x, height);
-
-        ui.allocate_ui_with_layout(size, egui::Layout::top_down(egui::Align::Min), |ui| {
-            ui.columns(2, |cols| {
-                chart.show_plot(&mut cols[0]);
-                chart2.show_plot(&mut cols[1]);
-            });
-        });
+        // let chart = chart::line2diff::ChartLine2diff::new(
+        //     "idk",
+        //     &[
+        //         application::analytics::Point([0.0, 0.0]),
+        //         application::analytics::Point([1.0, 3.0]),
+        //         application::analytics::Point([2.0, 12.0]),
+        //         application::analytics::Point([3.0, 13.0]),
+        //         application::analytics::Point([4.0, 14.0]),
+        //         application::analytics::Point([5.0, 14.0]),
+        //         application::analytics::Point([6.0, 14.0]),
+        //         application::analytics::Point([7.0, 20.0]),
+        //     ],
+        //     &[
+        //         application::analytics::Point([0.0, 0.0]),
+        //         application::analytics::Point([1.0, 2.0]),
+        //         application::analytics::Point([2.0, 8.0]),
+        //         application::analytics::Point([3.0, 8.0]),
+        //         application::analytics::Point([4.0, 8.0]),
+        //         application::analytics::Point([5.0, 9.0]),
+        //         application::analytics::Point([6.0, 9.0]),
+        //         application::analytics::Point([7.0, 10.0]),
+        //     ],
+        // );
+        // let chart2 = chart::line2diff::ChartLine2diff::new(
+        //     "idk2",
+        //     &[
+        //         application::analytics::Point([0.0, 0.0]),
+        //         application::analytics::Point([1.0, 3.0]),
+        //         application::analytics::Point([2.0, 12.0]),
+        //         application::analytics::Point([3.0, 13.0]),
+        //         application::analytics::Point([4.0, 14.0]),
+        //         application::analytics::Point([5.0, 14.0]),
+        //         application::analytics::Point([6.0, 14.0]),
+        //         application::analytics::Point([7.0, 20.0]),
+        //     ],
+        //     &[
+        //         application::analytics::Point([0.0, 0.0]),
+        //         application::analytics::Point([1.0, 2.0]),
+        //         application::analytics::Point([2.0, 8.0]),
+        //         application::analytics::Point([3.0, 8.0]),
+        //         application::analytics::Point([4.0, 8.0]),
+        //         application::analytics::Point([5.0, 9.0]),
+        //         application::analytics::Point([6.0, 9.0]),
+        //         application::analytics::Point([7.0, 10.0]),
+        //     ],
+        // );
+        //
+        // let height = 300.0;
+        // let available_size = ui.available_size_before_wrap();
+        // let size = egui::vec2(available_size.x, height);
+        //
+        // ui.allocate_ui_with_layout(size, egui::Layout::top_down(egui::Align::Min), |ui| {
+        //     ui.columns(2, |cols| {
+        //         chart.show_plot(&mut cols[0]);
+        //         chart2.show_plot(&mut cols[1]);
+        //     });
+        // });
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let app = App::new()?;
+    let mut app = App::new()?;
+
+    let root = app.core.tree.get_nodes_at(&automerge::ObjId::Root).unwrap();
+    let name = app.core.tree.get_node_data(&root[0]).unwrap().name;
+    let progress = app.core.tree.get_node_progress(&root[0]).unwrap();
+    println!("node {name} has {} out of {}", progress.0, progress.1);
 
     Ok(eframe::run_native(
         application::APP_NAME,

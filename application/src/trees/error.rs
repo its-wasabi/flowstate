@@ -1,5 +1,6 @@
 pub type Result<T> = std::result::Result<T, TreeError>;
 
+#[derive(Debug)]
 pub enum TreeError {
     MissingRoot,
     MissingProperty,

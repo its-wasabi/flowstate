@@ -24,9 +24,10 @@ const CONFIG_SAVE_PATH: &str = "config.json";
 pub struct Core {
     runtime: tokio::runtime::Runtime,
     storage: storage::Storage,
-    config: config::Config,
     sync: peer::Peer,
-    tree: trees::Trees,
+
+    pub config: config::Config,
+    pub tree: trees::Trees,
 }
 
 impl Core {
@@ -44,8 +45,9 @@ impl Core {
         Ok(Self {
             runtime,
             storage,
-            config,
             sync,
+
+            config,
             tree,
         })
     }
