@@ -11,8 +11,24 @@ pub enum TreeError {
 }
 
 impl std::fmt::Display for TreeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::MissingRoot => {
+                write!(fmt, "missing root node in document")
+            }
+            Self::MissingProperty => {
+                write!(fmt, "missing required property")
+            }
+            Self::InvalidNodeType => {
+                write!(fmt, "invalid node type")
+            }
+            Self::InvalidValue => {
+                write!(fmt, "invalid value")
+            }
+            Self::Automerge(err) => {
+                write!(fmt, "automerge error: {err}")
+            }
+        }
     }
 }
 

@@ -46,6 +46,9 @@ impl Trees {
 }
 
 impl Trees {
+    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<node::NodeData> {
+        node::NodeData::from_doc(&self.document, id)
+    }
     pub fn get_children(
         &self,
         id: &automerge::ObjId,
@@ -88,7 +91,7 @@ impl Trees {
         &mut self,
         id: &automerge::ObjId,
         node: node::NodeData,
-    ) -> error::Result<()> {
+    ) -> error::Result<automerge::ObjId> {
         let mut tx = self.document.transaction();
         let list_id = match tx.get(id, CHILDREN)? {
             Some((_, list_id)) => list_id,
@@ -100,7 +103,7 @@ impl Trees {
         node.apply_data(&mut tx, &new_node_id)?;
 
         tx.commit();
-        Ok(())
+        Ok(new_node_id)
     }
 }
 
