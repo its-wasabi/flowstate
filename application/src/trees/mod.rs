@@ -1,3 +1,5 @@
+use automerge::{ReadDoc, transaction::Transactable};
+
 pub mod error;
 pub mod node;
 pub(crate) mod sync;
@@ -20,14 +22,8 @@ pub struct Trees {
 
 impl Default for Trees {
     fn default() -> Self {
-        use automerge::transaction::Transactable;
-        let mut document = automerge::Automerge::new();
-        let mut tx = document.transaction();
-        tx.put_object(automerge::ObjId::Root, CHILDREN, automerge::ObjType::List)
-            .unwrap();
-        tx.commit();
-
-        Self { document }
+        #[allow(clippy::expect_used)]
+        Self::new().expect("failed to initialize root CHILDREN list on a fresh document")
     }
 }
 
@@ -40,86 +36,82 @@ impl crate::storage::FromBytes for Trees {
 }
 
 impl Trees {
-    pub fn append_node_at(
+    pub fn new() -> error::Result<Self> {
+        let mut document = automerge::Automerge::new();
+        let mut tx = document.transaction();
+        tx.put_object(automerge::ObjId::Root, CHILDREN, automerge::ObjType::List)?;
+        tx.commit();
+        Ok(Self { document })
+    }
+}
+
+impl Trees {
+    pub fn get_children(
+        &self,
+        id: &automerge::ObjId,
+    ) -> error::Result<Vec<(automerge::ObjId, node::NodeData)>> {
+        let Some((_, list_id)) = self.document.get(id, CHILDREN)? else {
+            return Ok(Vec::with_capacity(0));
+        };
+        let list_len = self.document.length(&list_id);
+        let mut children = Vec::with_capacity(list_len);
+        for i in 0..list_len {
+            let (_, child_id) = self
+                .document
+                .get(&list_id, i)?
+                .ok_or(error::TreeError::MissingProperty)?;
+            let data = node::NodeData::from_doc(&self.document, &child_id)?;
+            children.push((child_id, data));
+        }
+
+        Ok(children)
+    }
+    pub fn get_parent(
+        &self,
+        id: &automerge::ObjId,
+    ) -> error::Result<(automerge::ObjId, node::NodeData)> {
+        let mut parents = self.document.parents(id)?;
+        // first parent is the list containing this node, skip it
+        parents.next().ok_or(error::TreeError::MissingProperty)?;
+        // second parent is the actual node map
+        let parent = parents.next().ok_or(error::TreeError::MissingRoot)?;
+        if parent.obj == automerge::ObjId::Root {
+            return Err(error::TreeError::MissingRoot);
+        }
+        let data = node::NodeData::from_doc(&self.document, &parent.obj)?;
+        Ok((parent.obj, data))
+    }
+}
+
+impl Trees {
+    pub fn append_child(
         &mut self,
-        parent_node_id: &automerge::ObjId,
-        node_data: node::NodeData,
+        id: &automerge::ObjId,
+        node: node::NodeData,
     ) -> error::Result<()> {
-        use automerge::ReadDoc;
-        use automerge::transaction::Transactable;
         let mut tx = self.document.transaction();
+        let list_id = match tx.get(id, CHILDREN)? {
+            Some((_, list_id)) => list_id,
+            None => tx.put_object(id, CHILDREN, automerge::ObjType::List)?,
+        };
+        let list_len = tx.length(&list_id);
 
-        let (_, parent_list_id) = tx
-            .get(parent_node_id, CHILDREN)?
-            .ok_or(error::TreeError::MissingProperty)?;
-        let parent_list_len = tx.length(&parent_list_id);
-
-        let new_node_id =
-            tx.insert_object(&parent_list_id, parent_list_len, automerge::ObjType::Map)?;
-        node_data.apply_data(&mut tx, &new_node_id)?;
+        let new_node_id = tx.insert_object(&list_id, list_len, automerge::ObjType::Map)?;
+        node.apply_data(&mut tx, &new_node_id)?;
 
         tx.commit();
         Ok(())
     }
+}
 
-    pub fn get_nodes_at(
-        &self,
-        parent_node_id: &automerge::ObjId,
-    ) -> error::Result<Vec<automerge::ObjId>> {
-        use automerge::ReadDoc;
-        let (_, list_id) = self
-            .document
-            .get(parent_node_id, CHILDREN)?
-            .ok_or(error::TreeError::MissingProperty)?;
+impl Trees {
+    pub fn remove(&mut self, id: &automerge::ObjId) -> error::Result<()> {
+        let mut tx = self.document.transaction();
+        let mut parents = tx.parents(id)?;
+        let parent = parents.next().ok_or(error::TreeError::MissingProperty)?;
+        tx.delete(&parent.obj, parent.prop)?;
 
-        let list_len = self.document.length(&list_id);
-        let mut nodes = Vec::with_capacity(list_len);
-        for i in 0..list_len {
-            let (child, child_id) = self
-                .document
-                .get(&list_id, i)?
-                .ok_or(error::TreeError::MissingProperty)?;
-
-            let data = child_id;
-            nodes.push(data);
-        }
-
-        Ok(nodes)
-    }
-
-    pub fn get_node_data(&self, node_id: &automerge::ObjId) -> error::Result<node::NodeData> {
-        node::NodeData::from_doc(&self.document, node_id)
-    }
-
-    pub fn get_node_progress(&self, node_id: &automerge::ObjId) -> error::Result<(u64, u64)> {
-        use automerge::ReadDoc;
-
-        let (_, list_id) = self
-            .document
-            .get(node_id, CHILDREN)?
-            .ok_or(error::TreeError::MissingProperty)?;
-
-        let list_len = self.document.length(&list_id);
-
-        if list_len == 0 {
-            let node = node::NodeData::from_doc(&self.document, node_id)?;
-            Ok((node.task_total, node.task_completed))
-        } else {
-            let mut sum_total: u64 = 0;
-            let mut sum_completed: u64 = 0;
-
-            for i in 0..list_len {
-                let (_, child_id) = self
-                    .document
-                    .get(&list_id, i)?
-                    .ok_or(error::TreeError::MissingProperty)?;
-
-                let (t, c) = self.get_node_progress(&child_id)?;
-                sum_total += t;
-                sum_completed += c;
-            }
-
-            Ok((sum_total, sum_completed))
-        }
+        tx.commit();
+        Ok(())
     }
 }

@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NodeData {
     pub name: String,
     pub desc: String,
@@ -22,39 +22,58 @@ impl NodeData {
 
         Ok(())
     }
+}
+
+impl NodeData {
     pub fn from_doc(
         doc: &automerge::Automerge,
         id: &automerge::ObjId,
     ) -> super::error::Result<Self> {
-        use automerge::ReadDoc;
-        use automerge::ScalarValue;
+        use automerge::{ReadDoc, ScalarValue};
 
-        let get_string = |key| -> super::error::Result<String> {
-            let (val, _) = doc
-                .get(id, key)?
-                .ok_or(super::error::TreeError::MissingProperty)?;
-            match val.into_scalar() {
-                Ok(ScalarValue::Str(s)) => Ok(s.to_string()),
-                _ => Err(super::error::TreeError::MissingProperty),
-            }
+        let (name_val, _) = doc
+            .get(id, super::NODE_NAME)?
+            .ok_or(super::error::TreeError::MissingProperty)?;
+        let name = match name_val.into_scalar() {
+            Ok(ScalarValue::Str(s)) => s.to_string(),
+            _ => return Err(super::error::TreeError::MissingProperty),
         };
 
-        let get_u64 = |key| -> super::error::Result<u64> {
-            let (val, _) = doc
-                .get(id, key)?
-                .ok_or(super::error::TreeError::MissingProperty)?;
-            match val.into_scalar() {
-                Ok(ScalarValue::Uint(u)) => Ok(u),
-                Ok(ScalarValue::Int(i)) => Ok(i as u64),
-                _ => Err(super::error::TreeError::MissingProperty),
+        let (desc_val, _) = doc
+            .get(id, super::NODE_DESC)?
+            .ok_or(super::error::TreeError::MissingProperty)?;
+        let desc = match desc_val.into_scalar() {
+            Ok(ScalarValue::Str(s)) => s.to_string(),
+            _ => return Err(super::error::TreeError::MissingProperty),
+        };
+
+        let (total_val, _) = doc
+            .get(id, super::NODE_TASK_TOTAL)?
+            .ok_or(super::error::TreeError::MissingProperty)?;
+        let task_total = match total_val.into_scalar() {
+            Ok(ScalarValue::Uint(u)) => u,
+            Ok(ScalarValue::Int(i)) => {
+                u64::try_from(i).map_err(|_| super::error::TreeError::InvalidValue)?
             }
+            _ => return Err(super::error::TreeError::MissingProperty),
+        };
+
+        let (completed_val, _) = doc
+            .get(id, super::NODE_TASK_COMPLETED)?
+            .ok_or(super::error::TreeError::MissingProperty)?;
+        let task_completed = match completed_val.into_scalar() {
+            Ok(ScalarValue::Uint(u)) => u,
+            Ok(ScalarValue::Int(i)) => {
+                u64::try_from(i).map_err(|_| super::error::TreeError::InvalidValue)?
+            }
+            _ => return Err(super::error::TreeError::MissingProperty),
         };
 
         Ok(Self {
-            name: get_string(super::NODE_NAME)?,
-            desc: get_string(super::NODE_DESC)?,
-            task_total: get_u64(super::NODE_TASK_TOTAL)?,
-            task_completed: get_u64(super::NODE_TASK_COMPLETED)?,
+            name,
+            desc,
+            task_total,
+            task_completed,
         })
     }
 }

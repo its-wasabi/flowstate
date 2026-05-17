@@ -24,10 +24,11 @@ const CONFIG_SAVE_PATH: &str = "config.json";
 pub struct Core {
     runtime: tokio::runtime::Runtime,
     storage: storage::Storage,
-    sync: peer::Peer,
 
     pub config: config::Config,
     pub tree: trees::Trees,
+
+    sync: Option<peer::Peer>,
 }
 
 impl Core {
@@ -40,15 +41,20 @@ impl Core {
         let mut tree: trees::Trees =
             storage.load_or_default(DOCUMENT_SAVE_PATH, storage::paths::StorageKind::Data)?;
 
-        let sync = peer::Peer::new(&mut tree.document, config.server_socket)?;
+        let sync = if let Some(server_socket) = config.server_socket {
+            Some(peer::Peer::new(&mut tree.document, server_socket)?)
+        } else {
+            None
+        };
 
         Ok(Self {
             runtime,
             storage,
-            sync,
 
             config,
             tree,
+
+            sync,
         })
     }
 
@@ -67,14 +73,11 @@ impl Core {
 
         Ok(())
     }
-
-    pub fn sync(&mut self) {
-        self.sync.sync(&mut self.tree.document);
-    }
 }
 
 impl Drop for Core {
     fn drop(&mut self) {
+        self.save();
         self.storage.flush();
     }
 }
