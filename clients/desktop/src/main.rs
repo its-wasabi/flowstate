@@ -1,7 +1,7 @@
 mod chart;
 
 struct TreeState {
-    selected: Option<(automerge::ObjId, application::trees::node::NodeData)>,
+    selected: Option<(automerge::ObjId, application::trees::NodeData)>,
 }
 
 impl TreeState {
@@ -28,7 +28,7 @@ impl TreeState {
         ui: &mut egui::Ui,
         tree: &application::trees::Trees,
         id: &automerge::ObjId,
-        node: &application::trees::node::NodeData,
+        node: &application::trees::NodeData,
         depth: usize,
         index: usize,
         current_node: &mut automerge::ObjId,
@@ -39,11 +39,11 @@ impl TreeState {
             .as_ref()
             .map(|(sid, _)| sid == id)
             .unwrap_or(false);
-        let label = format!("{}: {}", node.name, node.desc);
+        let label = node.name.as_str();
 
         ui.push_id((depth, index), |ui| {
             if children.is_empty() {
-                if ui.selectable_label(is_selected, &label).clicked() {
+                if ui.selectable_label(is_selected, label).clicked() {
                     self.selected = Some((id.clone(), node.clone()));
                     *current_node = id.clone();
                 }
@@ -60,7 +60,7 @@ impl TreeState {
 
                 state
                     .show_header(ui, |ui| {
-                        if ui.selectable_label(is_selected, &label).clicked() {
+                        if ui.selectable_label(is_selected, label).clicked() {
                             self.selected = Some((id_clone.clone(), node_clone.clone()));
                             *current_node = id_clone.clone(); // <-- set it
                         }
@@ -235,7 +235,7 @@ impl eframe::App for App {
                     {
                         if let Ok(id) = self.core.tree.append_child(
                             &self.current_node,
-                            application::trees::node::NodeData {
+                            application::trees::NodeData {
                                 name: "APP ADDED".into(),
                                 desc: "KJDFLKSDJFLKSDJFKL".into(),
                                 task_completed: 12,
