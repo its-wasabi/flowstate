@@ -92,18 +92,18 @@ impl NodeData {
 }
 
 #[derive(Debug)]
-pub struct Trees {
+pub struct Tree {
     pub document: automerge::Automerge,
 }
 
-impl Default for Trees {
+impl Default for Tree {
     fn default() -> Self {
         #[allow(clippy::expect_used)]
         Self::new().expect("failed to initialize root CHILDREN list on a fresh document")
     }
 }
 
-impl crate::storage::FromBytes for Trees {
+impl crate::storage::FromBytes for Tree {
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             document: automerge::Automerge::load(bytes)?,
@@ -111,7 +111,7 @@ impl crate::storage::FromBytes for Trees {
     }
 }
 
-impl Trees {
+impl Tree {
     pub fn new() -> error::Result<Self> {
         let mut document = automerge::Automerge::new();
         let mut tx = document.transaction();
@@ -121,7 +121,7 @@ impl Trees {
     }
 }
 
-impl Trees {
+impl Tree {
     pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<NodeData> {
         NodeData::from_doc(&self.document, id)
     }
@@ -159,7 +159,7 @@ impl Trees {
     }
 }
 
-impl Trees {
+impl Tree {
     pub fn append_child(
         &mut self,
         id: &automerge::ObjId,
@@ -180,7 +180,7 @@ impl Trees {
     }
 }
 
-impl Trees {
+impl Tree {
     pub fn remove(&mut self, id: &automerge::ObjId) -> error::Result<()> {
         let mut tx = self.document.transaction();
         let mut parents = tx.parents(id)?;

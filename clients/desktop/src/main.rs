@@ -1,7 +1,7 @@
 mod chart;
 
 struct TreeState {
-    selected: Option<(automerge::ObjId, application::trees::NodeData)>,
+    selected: Option<(automerge::ObjId, application::tree::NodeData)>,
 }
 
 impl TreeState {
@@ -12,7 +12,7 @@ impl TreeState {
     fn render(
         &mut self,
         ui: &mut egui::Ui,
-        tree: &application::trees::Trees,
+        tree: &application::tree::Tree,
         current_node: &mut automerge::ObjId,
     ) {
         ui.scope(|ui| {
@@ -26,9 +26,9 @@ impl TreeState {
     fn render_node(
         &mut self,
         ui: &mut egui::Ui,
-        tree: &application::trees::Trees,
+        tree: &application::tree::Tree,
         id: &automerge::ObjId,
-        node: &application::trees::NodeData,
+        node: &application::tree::NodeData,
         depth: usize,
         index: usize,
         current_node: &mut automerge::ObjId,
@@ -235,7 +235,7 @@ impl eframe::App for App {
                     {
                         if let Ok(id) = self.core.tree.append_child(
                             &self.current_node,
-                            application::trees::NodeData {
+                            application::tree::NodeData {
                                 name: "APP ADDED".into(),
                                 desc: "KJDFLKSDJFLKSDJFKL".into(),
                                 task_completed: 12,

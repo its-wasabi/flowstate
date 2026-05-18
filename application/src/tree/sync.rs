@@ -1,4 +1,4 @@
-impl super::Trees {
+impl super::Tree {
     pub(super) fn generate_sync_message(
         &self,
         local_sync_state: &mut automerge::sync::State,

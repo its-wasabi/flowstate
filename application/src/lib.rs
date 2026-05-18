@@ -13,7 +13,7 @@ pub mod config;
 pub mod error;
 pub mod peer;
 pub mod storage;
-pub mod trees;
+pub mod tree;
 
 pub const APP_NAME: &str = "flowstate";
 
@@ -26,7 +26,7 @@ pub struct Core {
     storage: storage::Storage,
 
     pub config: config::Config,
-    pub tree: trees::Trees,
+    pub tree: tree::Tree,
 
     sync: Option<peer::Peer>,
 }
@@ -38,7 +38,7 @@ impl Core {
 
         let config: config::Config =
             storage.load_or_default(CONFIG_SAVE_PATH, storage::paths::StorageKind::Config)?;
-        let mut tree: trees::Trees =
+        let mut tree: tree::Tree =
             storage.load_or_default(DOCUMENT_SAVE_PATH, storage::paths::StorageKind::Data)?;
 
         let sync = if let Some(server_socket) = config.server_socket {
