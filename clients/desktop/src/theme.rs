@@ -50,4 +50,20 @@ pub fn apply(cc: &eframe::CreationContext) {
     v.popup_shadow = egui::Shadow::NONE;
     v.window_stroke = Stroke::new(1.0, BORDER);
     cc.egui_ctx.set_visuals(v);
+
+    let mut fonts = egui::FontDefinitions::default();
+
+    fonts.font_data.insert(
+        "IosevkaCode".to_owned(),
+        std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
+            "../../../clients/assets/fonts/IosevkaCode-Regular.ttf"
+        ))),
+    );
+
+    if let Some(x) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
+        x.insert(0, "IosevkaCode".to_owned());
+        cc.egui_ctx.set_fonts(fonts);
+    } else {
+        eprintln!("FAILED TO LOAD FONT");
+    }
 }

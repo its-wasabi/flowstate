@@ -12,6 +12,14 @@ impl Tasks {
 
 impl super::View for Tasks {
     fn main(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
+        ui.add(
+            egui::ProgressBar::new(0.4)
+                .corner_radius(0)
+                .fill(crate::theme::TEXT)
+                .desired_height(20.0)
+                .text(egui::RichText::new("[12/32]").color(crate::theme::BG)),
+        );
+
         ui.heading(format!(
             "USING FLOWSTATE {}.{}.{} WITH {}.{}.{} UI (FROM MAIN)",
             application::APP_VERSION.0,
