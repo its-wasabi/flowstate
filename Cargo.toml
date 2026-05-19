@@ -1,12 +1,14 @@
 [workspace]
 members = [
+	"utils",
 	"server",
 	"application",
-	"clients/desktop",
+	"clients/desktop", 
 ]
 resolver = "2"
 
 [workspace.dependencies]
+utils = { path = "utils" }
 application = { path = "application" }
 
 tokio         = { version = "1", features = ["full"] }

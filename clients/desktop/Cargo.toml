@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+utils.workspace = true
 application.workspace = true
 
 automerge = { workspace = true }
@@ -17,3 +18,4 @@ eframe = { version = "0.34.2", default-features = false, features = [
     "wgpu",
     "wayland",
 ] }
+egui_extras = "0.34.2"

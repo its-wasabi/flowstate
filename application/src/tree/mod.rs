@@ -1,6 +1,7 @@
 use automerge::{ReadDoc, transaction::Transactable};
 
 pub mod error;
+pub mod node;
 pub(crate) mod sync;
 
 /// List of all children of that object
