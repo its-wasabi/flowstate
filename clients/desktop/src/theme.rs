@@ -3,6 +3,8 @@ use egui::{
     style::{Selection, WidgetVisuals, Widgets},
 };
 
+pub const NAV_MIN_WIDTH: f32 = 210.0;
+
 pub const TEXT: Color32 = Color32::WHITE;
 pub const TEXT_ON_ACTIVE: Color32 = Color32::BLACK;
 pub const BG: Color32 = Color32::BLACK;
@@ -41,7 +43,7 @@ pub fn apply(cc: &eframe::CreationContext) {
 
     v.selection = Selection {
         bg_fill: ASIDE_BG,
-        stroke: Stroke::new(1.0, TEXT), // white text when selected at rest
+        stroke: Stroke::new(1.0, TEXT),
     };
 
     v.window_shadow = egui::Shadow::NONE;

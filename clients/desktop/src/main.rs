@@ -341,6 +341,7 @@ impl eframe::App for App {
         let full_width = ui.available_width();
         egui::Panel::left("aside")
             .frame(egui::Frame::default().fill(theme::ASIDE_BG))
+            .min_size(theme::NAV_MIN_WIDTH)
             .max_size(full_width / 1.2)
             .show_inside(ui, |ui| {
                 egui::Panel::top("nav")
