@@ -337,7 +337,7 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let full_width = ui.available_width();
         egui::Panel::left("aside")
             .frame(egui::Frame::default().fill(theme::ASIDE_BG))
