@@ -265,6 +265,7 @@
 mod config;
 mod stats;
 mod tasks;
+mod theme;
 
 const UI_VERSION: (u32, u32, u32) = utils::crate_version!();
 
@@ -315,11 +316,15 @@ impl App {
                     ("CONFIG", Tab::Config),
                 ] {
                     strip.cell(|ui| {
+                        let selected = self.current_tab == target;
+                        if selected {
+                            // Kill hover effect on the already-active button
+                            ui.visuals_mut().widgets.hovered.weak_bg_fill = theme::ACTIVE;
+                        }
                         if ui
                             .add_sized(
                                 ui.available_size(),
-                                egui::Button::selectable(self.current_tab == target, label)
-                                    .corner_radius(0),
+                                egui::Button::selectable(selected, label).corner_radius(0),
                             )
                             .clicked()
                         {
@@ -335,11 +340,11 @@ impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, frame: &mut eframe::Frame) {
         let full_width = ui.available_width();
         egui::Panel::left("aside")
-            .frame(egui::Frame::default())
+            .frame(egui::Frame::default().fill(theme::ASIDE_BG))
             .max_size(full_width / 1.2)
             .show_inside(ui, |ui| {
                 egui::Panel::top("nav")
-                    .frame(egui::Frame::default())
+                    .frame(egui::Frame::default().fill(theme::BG))
                     .show_inside(ui, |ui| {
                         self.nav(ui);
                     });
@@ -378,6 +383,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             viewport: egui::ViewportBuilder::default().with_title(application::APP_NAME),
             ..Default::default()
         },
-        Box::new(|_cc| Ok(Box::new(app) as _)),
+        Box::new(|cc| {
+            theme::apply(cc);
+            Ok(Box::new(app) as _)
+        }),
     )?)
 }

@@ -1,3 +1,5 @@
+mod chart;
+
 pub struct Stats {}
 
 impl Stats {
