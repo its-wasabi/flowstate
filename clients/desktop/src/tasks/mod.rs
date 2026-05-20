@@ -62,8 +62,8 @@ impl super::View for Tasks {
 
         let children = core.tree.get_children(&self.current_task)?;
         egui::ScrollArea::vertical().show(ui, |ui| {
-            for (child_node_id, child_node_data) in children {
-                ui.label(child_node_data.name);
+            for child_node_data in children {
+                ui.label(child_node_data.1.name);
             }
         });
 

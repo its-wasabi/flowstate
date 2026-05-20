@@ -20,7 +20,6 @@ pub const NODE_TASK_COMPLETED: &str = "c";
 #[derive(Debug)]
 pub struct Tree {
     pub document: automerge::Automerge,
-    current_node: automerge::ObjId,
 }
 
 impl Default for Tree {
@@ -34,7 +33,6 @@ impl crate::storage::FromBytes for Tree {
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             document: automerge::Automerge::load(bytes)?,
-            current_node: automerge::ObjId::Root,
         })
     }
 }
@@ -45,10 +43,7 @@ impl Tree {
         let mut tx = document.transaction();
         tx.put_object(automerge::ObjId::Root, CHILDREN, automerge::ObjType::List)?;
         tx.commit();
-        Ok(Self {
-            document,
-            current_node: automerge::ObjId::Root,
-        })
+        Ok(Self { document })
     }
 }
 
@@ -122,25 +117,3 @@ impl Tree {
         Ok(())
     }
 }
-
-impl Tree {
-    pub fn go_to(&mut self, id: automerge::ObjId) {
-        self.current_node = id;
-    }
-
-    pub fn go_parent(&mut self) -> error::Result<()> {
-        let mut parents = self.document.parents(self.current_node.clone())?;
-        // first parent is the list containing this node
-        parents.next().ok_or(error::TreeError::MissingProperty)?;
-        // second parent is the actual node map
-        let parent = parents.next().ok_or(error::TreeError::MissingRoot)?;
-
-        self.current_node = parent.obj;
-        Ok(())
-    }
-}
-
-// get_parent_progress(&self) -> Task
-// get_children(&self) -> Vec<Node>
-
-impl Tree {}
