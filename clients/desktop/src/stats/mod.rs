@@ -10,10 +10,11 @@ impl Stats {
 
 impl super::View for Stats {
     fn main(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        ui.label("HELLO MAIN FROM STATS");
+        ui.heading("HELLO MAIN FROM STATS");
     }
 
     fn aside(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        ui.label("HELLO FROM ASIDE OF STATISTICS");
+        ui.heading("HELLO FROM ASIDE OF STATISTICS");
+        ui.label("yess size");
     }
 }

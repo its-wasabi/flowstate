@@ -125,13 +125,6 @@
 //
 //                             if self.current_node != automerge::ROOT {
 //                                 ui.scope(|ui| {
-//                                     let w = &mut ui.visuals_mut().widgets;
-//                                     w.inactive.weak_bg_fill = egui::Color32::TRANSPARENT;
-//                                     w.inactive.bg_stroke = egui::Stroke::NONE;
-//                                     w.hovered.weak_bg_fill = egui::Color32::from_gray(50);
-//                                     w.hovered.bg_stroke = egui::Stroke::NONE;
-//                                     w.active.weak_bg_fill = egui::Color32::from_gray(35);
-//                                     w.active.bg_stroke = egui::Stroke::NONE;
 //
 //                                     let btn = ui.add_sized(
 //                                         egui::vec2(32.0, header_height),
@@ -324,7 +317,9 @@ impl App {
                         if ui
                             .add_sized(
                                 ui.available_size(),
-                                egui::Button::selectable(selected, label).corner_radius(0),
+                                egui::Button::selectable(selected, label)
+                                    .corner_radius(0)
+                                    .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT)),
                             )
                             .clicked()
                         {
@@ -346,6 +341,7 @@ impl eframe::App for App {
             .show_inside(ui, |ui| {
                 egui::Panel::top("nav")
                     .frame(egui::Frame::default().fill(theme::BG))
+                    .exact_size(theme::TOP_BAR_HEIGHT)
                     .show_inside(ui, |ui| {
                         self.nav(ui);
                     });

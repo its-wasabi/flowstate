@@ -3,7 +3,7 @@ pub struct Tasks {
 }
 
 impl Tasks {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             current_task: automerge::ROOT,
         }
@@ -15,22 +15,33 @@ impl super::View for Tasks {
         ui.add(
             egui::ProgressBar::new(0.4)
                 .corner_radius(0)
-                .fill(crate::theme::TEXT)
-                .desired_height(20.0)
-                .text(egui::RichText::new("[12/32]").color(crate::theme::BG)),
+                .fill(crate::theme::FG)
+                .desired_height(crate::theme::TOP_BAR_HEIGHT)
+                .desired_width(ui.available_width())
+                .text(egui::RichText::new("[ 12 / 32 ]").color(crate::theme::BG)),
         );
 
-        ui.heading(format!(
-            "USING FLOWSTATE {}.{}.{} WITH {}.{}.{} UI (FROM MAIN)",
-            application::APP_VERSION.0,
-            application::APP_VERSION.1,
-            application::APP_VERSION.2,
-            super::UI_VERSION.0,
-            super::UI_VERSION.1,
-            super::UI_VERSION.2,
-        ));
+        ui.add(egui::Separator::default().spacing(0.0));
+
+        ui.horizontal(|ui| {
+            crate::theme::styled_square_button(ui, "<", 50.0);
+
+            egui::Frame::default()
+                .outer_margin(egui::Margin::symmetric(0, 6))
+                .show(ui, |ui| {
+                    ui.vertical(|ui| {
+                        ui.heading("My Header");
+                        ui.label("s");
+                    });
+                });
+        });
+
+        ui.add(egui::Separator::default().spacing(0.0));
     }
+
     fn aside(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        ui.label("ASIDE");
+        for _ in 0..200 {
+            ui.label("ASIDE");
+        }
     }
 }
