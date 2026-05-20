@@ -23,11 +23,16 @@ pub enum Tab {
 }
 
 pub trait View {
+    /// # Errors
+    /// Depends on the internal implementation
     fn main(
         &mut self,
         ui: &mut egui::Ui,
         core: &mut application::Core,
     ) -> Result<(), Box<dyn std::error::Error>>;
+
+    /// # Errors
+    /// Depends on the internal implementation
     fn aside(
         &mut self,
         ui: &mut egui::Ui,
@@ -127,18 +132,7 @@ impl eframe::App for App {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut app = App::new()?;
-    app.core.tree.append_child(
-        &automerge::ROOT,
-        application::tree::Node {
-            name: "WELCOME BACK".into(),
-            desc: "THE SECOND TASK ADDED NICE".into(),
-            task: application::tree::node::Progress {
-                completed: 12,
-                total: 23,
-            },
-        },
-    );
+    let app = App::new()?;
 
     Ok(eframe::run_native(
         application::APP_NAME,

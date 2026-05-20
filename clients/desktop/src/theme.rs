@@ -3,7 +3,7 @@ use egui::{
     style::{Selection, WidgetVisuals, Widgets},
 };
 
-pub const TOP_BAR_HEIGHT: f32 = 18.0;
+pub const TOP_BAR_HEIGHT: f32 = 21.0;
 pub const NAV_MIN_WIDTH: f32 = 210.0;
 
 pub const FG: Color32 = Color32::WHITE;
@@ -77,17 +77,15 @@ pub fn apply(cc: &eframe::CreationContext) {
         ))),
     );
 
-    if let Some(prop) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
-        prop.insert(0, "IosevkaCode".to_owned());
-    } else {
-        eprintln!("FAILED TO LOAD FONT");
+    if let Some(vec) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
+        vec.insert(0, "IosevkaCode".to_owned());
     }
 
     cc.egui_ctx.set_fonts(fonts);
 }
 
 pub fn styled_square_button(ui: &mut egui::Ui, label: &str, row_height: f32) -> egui::Response {
-    let margin = 4.0;
+    let margin = 7.0;
     let square_size = (row_height - (margin * 2.0)).max(0.0);
 
     #[allow(clippy::cast_possible_truncation)]
@@ -97,4 +95,13 @@ pub fn styled_square_button(ui: &mut egui::Ui, label: &str, row_height: f32) -> 
             ui.add_sized([square_size, square_size], egui::Button::new(label))
         })
         .inner
+}
+
+pub fn flex_square_button(ui: &mut egui::Ui, label: egui::RichText, size: f32) -> egui::Response {
+    ui.add(
+        egui::Button::new(label)
+            // Forces height to `size`, and minimum width to `size`.
+            // If the label is wider, it will automatically grow.
+            .min_size(egui::vec2(size, size)),
+    )
 }

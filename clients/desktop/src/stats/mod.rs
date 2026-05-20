@@ -14,7 +14,8 @@ impl super::View for Stats {
         ui: &mut egui::Ui,
         core: &mut application::Core,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        ui.heading("HELLO MAIN FROM STATS");
+        ui.heading(egui::RichText::new("HELLO MAIN FROM STATS").monospace());
+        ui.heading(egui::RichText::new("HELLO MAIN FROM STATS"));
         Ok(())
     }
 

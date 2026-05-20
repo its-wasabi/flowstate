@@ -51,6 +51,48 @@ impl Tree {
     pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<Node> {
         Node::from_doc(&self.document, id)
     }
+
+    // TODO: Rewrite in more idiomatic manner
+    pub fn get_progress(&self, id: &automerge::ObjId) -> error::Result<node::Progress> {
+        let mut total = 0;
+        let mut completed = 0;
+
+        let has_children = match self.document.get(id, CHILDREN)? {
+            Some((_, list_id)) => self.document.length(&list_id) > 0,
+            None => false,
+        };
+
+        if has_children {
+            let Some((_, list_id)) = self.document.get(id, CHILDREN)? else {
+                unreachable!()
+            };
+
+            let list_len = self.document.length(&list_id);
+            for i in 0..list_len {
+                let (_, child_id) = self
+                    .document
+                    .get(&list_id, i)?
+                    .ok_or(error::TreeError::MissingProperty)?;
+
+                let child_progress = self.get_progress(&child_id)?;
+                total += child_progress.total;
+                completed += child_progress.completed;
+            }
+        } else {
+            if id == &automerge::ObjId::Root {
+                return Ok(node::Progress {
+                    total: 0,
+                    completed: 0,
+                });
+            }
+
+            let node = self.get_node(id)?;
+            return Ok(node.task);
+        }
+
+        Ok(node::Progress { total, completed })
+    }
+
     pub fn get_children(
         &self,
         id: &automerge::ObjId,
@@ -71,6 +113,7 @@ impl Tree {
 
         Ok(children)
     }
+
     pub fn get_parent(&self, id: &automerge::ObjId) -> error::Result<(automerge::ObjId, Node)> {
         let mut parents = self.document.parents(id)?;
         // first parent is the list containing this node, skip it
@@ -104,10 +147,8 @@ impl Tree {
         tx.commit();
         Ok(new_node_id)
     }
-}
 
-impl Tree {
-    pub fn remove(&mut self, id: &automerge::ObjId) -> error::Result<()> {
+    pub fn remove(&mut self, id: automerge::ObjId) -> error::Result<()> {
         let mut tx = self.document.transaction();
         let mut parents = tx.parents(id)?;
         let parent = parents.next().ok_or(error::TreeError::MissingProperty)?;
