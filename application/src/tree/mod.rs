@@ -4,6 +4,8 @@ pub mod error;
 pub mod node;
 pub(crate) mod sync;
 
+pub use node::Node;
+
 /// List of all children of that object
 pub const CHILDREN: &str = "l";
 /// Name of that node
@@ -15,86 +17,10 @@ pub const NODE_TASK_TOTAL: &str = "t";
 /// Number of completed tasks for that node
 pub const NODE_TASK_COMPLETED: &str = "c";
 
-#[derive(Debug, Clone)]
-pub struct NodeData {
-    pub name: String,
-    pub desc: String,
-
-    pub task_total: u64,
-    pub task_completed: u64,
-}
-
-impl NodeData {
-    fn apply_data(
-        self,
-        tx: &mut automerge::transaction::Transaction<'_>,
-        node_id: &automerge::ObjId,
-    ) -> error::Result<()> {
-        use automerge::transaction::Transactable;
-        tx.put(node_id, NODE_NAME, self.name)?;
-        tx.put(node_id, NODE_DESC, self.desc)?;
-        tx.put(node_id, NODE_TASK_TOTAL, self.task_total)?;
-        tx.put(node_id, NODE_TASK_COMPLETED, self.task_completed)?;
-        tx.put_object(node_id, CHILDREN, automerge::ObjType::List)?;
-
-        Ok(())
-    }
-}
-
-impl NodeData {
-    pub fn from_doc(doc: &automerge::Automerge, id: &automerge::ObjId) -> error::Result<Self> {
-        use automerge::{ReadDoc, ScalarValue};
-
-        let (name_val, _) = doc
-            .get(id, NODE_NAME)?
-            .ok_or(error::TreeError::MissingProperty)?;
-        let name = match name_val.into_scalar() {
-            Ok(ScalarValue::Str(s)) => s.to_string(),
-            _ => return Err(error::TreeError::MissingProperty),
-        };
-
-        let (desc_val, _) = doc
-            .get(id, NODE_DESC)?
-            .ok_or(error::TreeError::MissingProperty)?;
-        let desc = match desc_val.into_scalar() {
-            Ok(ScalarValue::Str(s)) => s.to_string(),
-            _ => return Err(error::TreeError::MissingProperty),
-        };
-
-        let (total_val, _) = doc
-            .get(id, NODE_TASK_TOTAL)?
-            .ok_or(error::TreeError::MissingProperty)?;
-        let task_total = match total_val.into_scalar() {
-            Ok(ScalarValue::Uint(u)) => u,
-            Ok(ScalarValue::Int(i)) => {
-                u64::try_from(i).map_err(|_| error::TreeError::InvalidValue)?
-            }
-            _ => return Err(error::TreeError::MissingProperty),
-        };
-
-        let (completed_val, _) = doc
-            .get(id, NODE_TASK_COMPLETED)?
-            .ok_or(error::TreeError::MissingProperty)?;
-        let task_completed = match completed_val.into_scalar() {
-            Ok(ScalarValue::Uint(u)) => u,
-            Ok(ScalarValue::Int(i)) => {
-                u64::try_from(i).map_err(|_| error::TreeError::InvalidValue)?
-            }
-            _ => return Err(error::TreeError::MissingProperty),
-        };
-
-        Ok(Self {
-            name,
-            desc,
-            task_total,
-            task_completed,
-        })
-    }
-}
-
 #[derive(Debug)]
 pub struct Tree {
     pub document: automerge::Automerge,
+    current_node: automerge::ObjId,
 }
 
 impl Default for Tree {
@@ -108,6 +34,7 @@ impl crate::storage::FromBytes for Tree {
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self {
             document: automerge::Automerge::load(bytes)?,
+            current_node: automerge::ObjId::Root,
         })
     }
 }
@@ -118,18 +45,21 @@ impl Tree {
         let mut tx = document.transaction();
         tx.put_object(automerge::ObjId::Root, CHILDREN, automerge::ObjType::List)?;
         tx.commit();
-        Ok(Self { document })
+        Ok(Self {
+            document,
+            current_node: automerge::ObjId::Root,
+        })
     }
 }
 
 impl Tree {
-    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<NodeData> {
-        NodeData::from_doc(&self.document, id)
+    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<Node> {
+        Node::from_doc(&self.document, id)
     }
     pub fn get_children(
         &self,
         id: &automerge::ObjId,
-    ) -> error::Result<Vec<(automerge::ObjId, NodeData)>> {
+    ) -> error::Result<Vec<(automerge::ObjId, Node)>> {
         let Some((_, list_id)) = self.document.get(id, CHILDREN)? else {
             return Ok(Vec::with_capacity(0));
         };
@@ -140,13 +70,13 @@ impl Tree {
                 .document
                 .get(&list_id, i)?
                 .ok_or(error::TreeError::MissingProperty)?;
-            let data = NodeData::from_doc(&self.document, &child_id)?;
+            let data = Node::from_doc(&self.document, &child_id)?;
             children.push((child_id, data));
         }
 
         Ok(children)
     }
-    pub fn get_parent(&self, id: &automerge::ObjId) -> error::Result<(automerge::ObjId, NodeData)> {
+    pub fn get_parent(&self, id: &automerge::ObjId) -> error::Result<(automerge::ObjId, Node)> {
         let mut parents = self.document.parents(id)?;
         // first parent is the list containing this node, skip it
         parents.next().ok_or(error::TreeError::MissingProperty)?;
@@ -155,7 +85,7 @@ impl Tree {
         if parent.obj == automerge::ObjId::Root {
             return Err(error::TreeError::MissingRoot);
         }
-        let data = NodeData::from_doc(&self.document, &parent.obj)?;
+        let data = Node::from_doc(&self.document, &parent.obj)?;
         Ok((parent.obj, data))
     }
 }
@@ -164,7 +94,7 @@ impl Tree {
     pub fn append_child(
         &mut self,
         id: &automerge::ObjId,
-        node: NodeData,
+        node: Node,
     ) -> error::Result<automerge::ObjId> {
         let mut tx = self.document.transaction();
         let list_id = match tx.get(id, CHILDREN)? {
@@ -192,3 +122,25 @@ impl Tree {
         Ok(())
     }
 }
+
+impl Tree {
+    pub fn go_to(&mut self, id: automerge::ObjId) {
+        self.current_node = id;
+    }
+
+    pub fn go_parent(&mut self) -> error::Result<()> {
+        let mut parents = self.document.parents(self.current_node.clone())?;
+        // first parent is the list containing this node
+        parents.next().ok_or(error::TreeError::MissingProperty)?;
+        // second parent is the actual node map
+        let parent = parents.next().ok_or(error::TreeError::MissingRoot)?;
+
+        self.current_node = parent.obj;
+        Ok(())
+    }
+}
+
+// get_parent_progress(&self) -> Task
+// get_children(&self) -> Vec<Node>
+
+impl Tree {}

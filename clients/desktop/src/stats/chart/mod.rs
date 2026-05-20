@@ -1,23 +1,22 @@
-pub mod line2diff;
-
-const COLOR_GRID: egui::Color32 = egui::Color32::from_gray(60);
-
-const COLOR_TODO: egui::Color32 = egui::Color32::from_rgb(0xFF, 0xB0, 0x20);
-const COLOR_DONE: egui::Color32 = egui::Color32::from_rgb(0x00, 0xFF, 0x9C);
-
-const SMOOTH_STEPS: usize = 128;
-const LINE_WIDTH: f32 = 3.4;
-
-const VLINE_COLOR: egui::Color32 = egui::Color32::from_rgb(0xff, 0xff, 0xff);
-const VLINE_WIDTH: f32 = 1.0;
-const VLINE_MIN_SEG: f64 = 0.05; // segments shorter than this are skipped (avoids stray dots)
-
-const CROSS_PAD: f64 = 0.2; // gap between vline end and intersection dot
-const LABEL_PAD: f64 = 0.2; // gap between vline end and number label
-const LABEL_DIST: f64 = 0.4; // distance from intersection dot to its number label
-
-const LABEL_SIZE: f32 = 16.0;
-const DOT_RADIUS: f32 = 5.0;
+// pub mod line2diff;
+//
+// const COLOR_GRID: egui::Color32 = egui::Color32::from_gray(60);
+//
+// const COLOR_TODO: egui::Color32 = egui::Color32::from_rgb(0xFF, 0xB0, 0x20);
+// const COLOR_DONE: egui::Color32 = egui::Color32::from_rgb(0x00, 0xFF, 0x9C);
+//
+// const LINE_WIDTH: f32 = 3.4;
+//
+// const VLINE_COLOR: egui::Color32 = egui::Color32::from_rgb(0xff, 0xff, 0xff);
+// const VLINE_WIDTH: f32 = 1.0;
+// const VLINE_MIN_SEG: f64 = 0.05; // segments shorter than this are skipped (avoids stray dots)
+//
+// const CROSS_PAD: f64 = 0.2; // gap between vline end and intersection dot
+// const LABEL_PAD: f64 = 0.2; // gap between vline end and number label
+// const LABEL_DIST: f64 = 0.4; // distance from intersection dot to its number label
+//
+// const LABEL_SIZE: f32 = 16.0;
+// const DOT_RADIUS: f32 = 5.0;
 
 // fn smooth(pts: &[(f64, f64)]) -> Vec<(f64, f64)> {
 //     if pts.len() < 2 {
