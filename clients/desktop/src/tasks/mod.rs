@@ -57,6 +57,7 @@ impl Tasks {
         ui: &mut egui::Ui,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let progress = core.tree.get_progress(&self.current_task)?;
+
         egui::Panel::top("tasks_top_bar")
             .frame(egui::Frame::default())
             .exact_size(crate::theme::TOP_BAR_HEIGHT)
@@ -131,7 +132,7 @@ impl Tasks {
                         application::tree::node::Node {
                             name: String::new(),
                             desc: String::new(),
-                            task: application::tree::node::Progress {
+                            progress: application::tree::node::Progress {
                                 total: 10,
                                 completed: 0,
                             },
@@ -243,7 +244,7 @@ impl Tasks {
     #[inline]
     fn child_progress(ui: &mut egui::Ui, child_data: &application::tree::Node) {
         ui.add(
-            egui::ProgressBar::new(child_data.task.progress())
+            egui::ProgressBar::new(child_data.progress.progress())
                 .corner_radius(0)
                 .fill(crate::theme::FG)
                 .desired_height(17.0)
@@ -251,7 +252,7 @@ impl Tasks {
                 .text(
                     egui::RichText::new(format!(
                         " [ {} / {} ]",
-                        child_data.task.completed, child_data.task.total
+                        child_data.progress.completed, child_data.progress.total
                     ))
                     .size(10.0)
                     .color(crate::theme::BORDER)

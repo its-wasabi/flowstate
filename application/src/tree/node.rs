@@ -17,7 +17,7 @@ pub struct Node {
     pub name: String,
     pub desc: String,
 
-    pub task: Progress,
+    pub progress: Progress,
 }
 
 impl Node {
@@ -29,8 +29,8 @@ impl Node {
         use automerge::transaction::Transactable;
         tx.put(node_id, super::NODE_NAME, self.name)?;
         tx.put(node_id, super::NODE_DESC, self.desc)?;
-        tx.put(node_id, super::NODE_TASK_TOTAL, self.task.total)?;
-        tx.put(node_id, super::NODE_TASK_COMPLETED, self.task.completed)?;
+        tx.put(node_id, super::NODE_TASK_TOTAL, self.progress.total)?;
+        tx.put(node_id, super::NODE_TASK_COMPLETED, self.progress.completed)?;
         tx.put_object(node_id, super::CHILDREN, automerge::ObjType::List)?;
 
         Ok(())
@@ -85,7 +85,7 @@ impl Node {
         Ok(Self {
             name,
             desc,
-            task: Progress {
+            progress: Progress {
                 total: task_total,
                 completed: task_completed,
             },

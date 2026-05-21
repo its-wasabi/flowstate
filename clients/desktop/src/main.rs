@@ -72,7 +72,6 @@ impl App {
                     strip.cell(|ui| {
                         let selected = self.current_tab == target;
                         if selected {
-                            // Kill hover effect on the already-active button
                             ui.visuals_mut().widgets.hovered.weak_bg_fill = theme::ACTIVE;
                         }
                         if ui
@@ -139,10 +138,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // app.core.tree.append_child(
     //     &automerge::ROOT,
     //     application::tree::Node {
-    //         name: "MAKE IT LONGERRRRR".into(),
-    //         desc: "aand polite description of that node a bit longer maybe some tesxt wrapping thest idk roll itmend polite description of that node a bit longer maybe some tesxt wrapping thest idk roll itme".into(),
+    //         name: "HELLO".into(),
+    //         desc: "woah hello really".into(),
     //         task: application::tree::node::Progress {
-    //             total: 20,
+    //             total: 39,
     //             completed: 18,
     //         },
     //     },

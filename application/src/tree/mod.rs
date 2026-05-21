@@ -87,12 +87,14 @@ impl Tree {
             }
 
             let node = self.get_node(id)?;
-            return Ok(node.task);
+            return Ok(node.progress);
         }
 
         Ok(node::Progress { total, completed })
     }
+}
 
+impl Tree {
     pub fn get_children(
         &self,
         id: &automerge::ObjId,
@@ -102,13 +104,24 @@ impl Tree {
         };
         let list_len = self.document.length(&list_id);
         let mut children = Vec::with_capacity(list_len);
+
         for i in 0..list_len {
             let (_, child_id) = self
                 .document
                 .get(&list_id, i)?
                 .ok_or(error::TreeError::MissingProperty)?;
+
             let data = Node::from_doc(&self.document, &child_id)?;
-            children.push((child_id, data));
+            let progress = self.get_progress(&child_id)?;
+
+            children.push((
+                child_id,
+                node::Node {
+                    name: data.name,
+                    desc: data.desc,
+                    progress,
+                },
+            ));
         }
 
         Ok(children)
