@@ -1,7 +1,8 @@
 mod chart;
 
 pub struct Stats {
-    chart: chart::line2diff::ChartLine2diff,
+    chart_tasks: chart::line2diff::ChartLine2diff,
+    chart_effort: chart::line2diff::ChartLine2diff,
 }
 
 impl Stats {
@@ -24,9 +25,13 @@ impl Stats {
             application::analytics::Point::new(9.0, 23.0),
         ];
 
-        let chart = chart::line2diff::ChartLine2diff::new("", &x, &y);
+        let chart_tasks = chart::line2diff::ChartLine2diff::new("chart_tasks", &x, &y);
+        let chart_effort = chart::line2diff::ChartLine2diff::new("chart_effort", &x, &y);
 
-        Self { chart }
+        Self {
+            chart_tasks,
+            chart_effort,
+        }
     }
 }
 
@@ -34,9 +39,30 @@ impl super::View for Stats {
     fn main(
         &mut self,
         ui: &mut egui::Ui,
-        core: &mut application::Core,
+        _core: &mut application::Core,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        self.chart.show_plot(ui);
+        let center_split = ui.available_height() / 2.0;
+        let min_quarter = ui.available_height() * 0.15;
+        let max_quarter = ui.available_height() * 0.85;
+
+        egui::Panel::top("top_panel_chart_tasks")
+            .frame(egui::Frame::default())
+            .resizable(true)
+            .default_size(center_split)
+            .size_range(min_quarter..=max_quarter)
+            .show_inside(ui, |ui| {
+                ui.centered_and_justified(|ui| {
+                    self.chart_tasks.show_plot(ui);
+                });
+            });
+
+        egui::CentralPanel::default()
+            .frame(egui::Frame::default())
+            .show_inside(ui, |ui| {
+                ui.centered_and_justified(|ui| {
+                    self.chart_effort.show_plot(ui);
+                });
+            });
 
         Ok(())
     }
@@ -44,11 +70,11 @@ impl super::View for Stats {
     fn aside(
         &mut self,
         ui: &mut egui::Ui,
-        core: &mut application::Core,
+        _core: &mut application::Core,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        ui.centered_and_justified(|ui| {
-            ui.heading("empty");
-        });
+        ui.heading("FROM: [set here]");
+        ui.heading("TO: [set here]");
+        ui.label("TODO: Make it basically control panel for the graph content e.g.: some constraint toggles etc...");
 
         Ok(())
     }
