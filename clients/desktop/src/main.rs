@@ -98,7 +98,7 @@ impl eframe::App for App {
         egui::Panel::left("aside")
             .frame(egui::Frame::default().fill(theme::ASIDE_BG))
             .min_size(theme::NAV_MIN_WIDTH)
-            .max_size(full_width / 1.2)
+            .max_size(full_width / 1.3)
             .show_inside(ui, |ui| {
                 egui::Panel::top("nav")
                     .frame(egui::Frame::default())
