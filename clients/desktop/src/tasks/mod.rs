@@ -169,7 +169,7 @@ impl Tasks {
         child_id: &automerge::ObjId,
         child_data: &application::tree::Node,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let collapsing_id = ui.make_persistent_id(format!("expand_{child_id}"));
+        let collapsing_id = ui.make_persistent_id(("expand", child_id));
         let mut collapsing_state = egui::collapsing_header::CollapsingState::load_with_default_open(
             ui.ctx(),
             collapsing_id,
