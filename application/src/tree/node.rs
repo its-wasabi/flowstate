@@ -1,4 +1,7 @@
-use std::ops::Add;
+use std::{
+    iter::Product,
+    ops::{Add, AddAssign},
+};
 
 #[derive(Debug, Clone)]
 pub struct Progress {
@@ -23,13 +26,10 @@ impl Default for Progress {
     }
 }
 
-impl Add for Progress {
-    type Output = Self;
-    fn add(self, rhs: Self) -> Self::Output {
-        Self {
-            total: self.total + rhs.total,
-            completed: self.completed + rhs.completed,
-        }
+impl AddAssign for Progress {
+    fn add_assign(&mut self, rhs: Self) {
+        self.total = self.total + rhs.total;
+        self.completed = self.completed + rhs.completed;
     }
 }
 

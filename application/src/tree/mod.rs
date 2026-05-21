@@ -64,7 +64,7 @@ impl Tree {
                         .get(&list_id, idx)?
                         .ok_or(error::TreeError::MissingProperty)?;
 
-                    progress = progress + self.get_progress(&child_id)?;
+                    progress += self.get_progress(&child_id)?;
                 }
             }
 
