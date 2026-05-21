@@ -55,3 +55,10 @@ pub fn settings() -> Image<'static> {
         .maintain_aspect_ratio(true)
         .texture_options(TextureOptions::NEAREST)
 }
+
+#[inline]
+pub fn add() -> Image<'static> {
+    Image::new(include_image!("../../assets/icons/add.svg"))
+        .maintain_aspect_ratio(true)
+        .texture_options(TextureOptions::NEAREST)
+}

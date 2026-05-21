@@ -6,7 +6,7 @@ use egui::{
 pub const TOP_BAR_HEIGHT: f32 = 21.0;
 pub const NAV_MIN_WIDTH: f32 = 210.0;
 
-pub const PARENT_BUTTON: f32 = 48.0;
+pub const PARENT_BUTTON: f32 = 40.0;
 pub const PARENT_BUTTON_V2: [f32; 2] = [PARENT_BUTTON, PARENT_BUTTON];
 pub const CHILD_BUTTON: f32 = 30.0;
 pub const CHILD_BUTTON_V2: [f32; 2] = [CHILD_BUTTON, CHILD_BUTTON];

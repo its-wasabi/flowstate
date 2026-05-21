@@ -1,3 +1,5 @@
+// TODO: If element has no child instead of displaying empty scroll area make some coll control
+// central element for that node without needing to expanding panel for more advanced things
 mod tree;
 
 pub struct Tasks {
@@ -12,7 +14,43 @@ impl Tasks {
             tree_state: tree::TreeState::new(),
         }
     }
+}
 
+impl super::View for Tasks {
+    fn main(
+        &mut self,
+        ui: &mut egui::Ui,
+        core: &mut application::Core,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        Self::top_bar(self, core, ui)?;
+        Self::parent_task(self, core, ui);
+
+        egui::Panel::bottom("panel_add_button")
+            .frame(egui::Frame::default())
+            .show_inside(ui, |ui| {
+                Self::add_button(self, ui, core);
+            });
+
+        egui::CentralPanel::default()
+            .frame(egui::Frame::default())
+            .show_inside(ui, |ui| Self::children(self, ui, core))
+            .inner?;
+
+        Ok(())
+    }
+
+    fn aside(
+        &mut self,
+        ui: &mut egui::Ui,
+        core: &mut application::Core,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        self.tree_state.show(ui, &core.tree, &mut self.current_task);
+        Ok(())
+    }
+}
+
+impl Tasks {
+    #[inline]
     fn top_bar(
         &self,
         core: &application::Core,
@@ -42,111 +80,118 @@ impl Tasks {
         Ok(())
     }
 
+    #[inline]
     fn parent_task(&mut self, core: &application::Core, ui: &mut egui::Ui) {
         if let Ok(node) = core.tree.get_node(&self.current_task) {
-            ui.horizontal(|ui| {
-                egui::Frame::default()
-                    .outer_margin(egui::Margin::same(4))
-                    .show(ui, |ui| {
-                        if ui
-                            .add_sized(
-                                crate::theme::PARENT_BUTTON_V2,
-                                egui::Button::image(crate::icons::left()),
-                            )
-                            .clicked()
-                        {
-                            if let Ok((id, _)) = core.tree.get_parent(&self.current_task) {
-                                self.current_task = id;
-                            } else {
-                                self.current_task = automerge::ROOT;
-                            }
-                        }
-                    });
+            egui::Panel::top("panel_parent_task")
+                .frame(egui::Frame::default())
+                .show_inside(ui, |ui| {
+                    ui.horizontal(|ui| {
+                        egui::Frame::default()
+                            .outer_margin(egui::Margin::same(4))
+                            .show(ui, |ui| {
+                                if ui
+                                    .add_sized(
+                                        crate::theme::PARENT_BUTTON_V2,
+                                        egui::Button::image(crate::icons::left()),
+                                    )
+                                    .clicked()
+                                {
+                                    if let Ok((id, _)) = core.tree.get_parent(&self.current_task) {
+                                        self.current_task = id;
+                                    } else {
+                                        self.current_task = automerge::ROOT;
+                                    }
+                                }
+                            });
 
-                egui::Frame::default()
-                    .outer_margin(egui::Margin::symmetric(2, 6))
-                    .show(ui, |ui| {
-                        ui.vertical(|ui| {
-                            ui.heading(node.name);
-                            ui.label(node.desc);
-                        });
+                        egui::Frame::default()
+                            .outer_margin(egui::Margin::symmetric(2, 6))
+                            .show(ui, |ui| {
+                                ui.vertical(|ui| {
+                                    ui.heading(node.name);
+                                    ui.label(node.desc);
+                                });
+                            });
                     });
-            });
-            ui.add(egui::Separator::default().spacing(0.0));
+                });
         }
     }
 
+    #[inline]
+    fn add_button(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
+        egui::Frame::default()
+            .inner_margin(egui::Margin::same(4))
+            .show(ui, |ui| {
+                let button_size = egui::vec2(ui.available_width(), crate::theme::CHILD_BUTTON);
+                let add_btn = egui::Button::image(crate::icons::add());
+                if ui.add_sized(button_size, add_btn).clicked()
+                    && let Ok(new_node) = core.tree.append_child(
+                        &self.current_task,
+                        application::tree::node::Node {
+                            name: String::new(),
+                            desc: String::new(),
+                            task: application::tree::node::Progress {
+                                total: 10,
+                                completed: 0,
+                            },
+                        },
+                    )
+                {
+                    self.current_task = new_node;
+                }
+            });
+    }
+
+    #[inline]
     fn children(
         &mut self,
-        core: &mut application::Core,
         ui: &mut egui::Ui,
+        core: &mut application::Core,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let children = core.tree.get_children(&self.current_task)?;
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            for (child_id, child_data) in children {
-                Self::child(self, ui, core, child_id, child_data);
-            }
-        });
-        Ok(())
+        egui::ScrollArea::vertical()
+            .content_margin(egui::Margin::symmetric(0, 0))
+            .show(ui, |ui| -> Result<(), Box<dyn std::error::Error>> {
+                if let Ok(children) = core.tree.get_children(&self.current_task) {
+                    for (child_id, child_data) in children {
+                        Self::child(self, ui, core, &child_id, &child_data)?;
+                    }
+                }
+                Ok(())
+            })
+            .inner
     }
 
     fn child(
         &mut self,
         ui: &mut egui::Ui,
         core: &mut application::Core,
-        child_id: automerge::ObjId,
-        child_data: application::tree::Node,
-    ) {
+        child_id: &automerge::ObjId,
+        child_data: &application::tree::Node,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let collapsing_id = ui.make_persistent_id(format!("expand_{child_id}"));
+        let mut collapsing_state = egui::collapsing_header::CollapsingState::load_with_default_open(
+            ui.ctx(),
+            collapsing_id,
+            false,
+        );
+
+        let mut result = Ok(());
+
         egui::Frame::default()
-            .outer_margin(egui::Margin::symmetric(6, 4)) // Small margin around cards
-            .inner_margin(egui::Margin {
-                ..Default::default()
-            }) // <-- Clean zero margin so progress bar touches edges
+            .outer_margin(egui::Margin::symmetric(6, 4))
             .corner_radius(0)
             .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
-
                 ui.vertical(|ui| {
-                    let progress_response = ui.add(
-                        egui::ProgressBar::new(child_data.task.progress())
-                            .corner_radius(0)
-                            .fill(crate::theme::FG)
-                            .desired_height(17.0)
-                            .desired_width(ui.available_width())
-                            .text(
-                                egui::RichText::new(format!(
-                                    " [ {} / {} ]",
-                                    child_data.task.completed, child_data.task.total
-                                ))
-                                .size(10.0)
-                                .color(crate::theme::BORDER)
-                                .strong(),
-                            ),
-                    );
+                    Self::child_progress(ui, child_data);
 
-                    // exactly at its bottom edge.
-                    let stroke_color = ui.visuals().widgets.noninteractive.bg_stroke.color;
-                    let line_y = progress_response.rect.bottom();
-                    let line_left = progress_response.rect.left();
-                    let line_right = progress_response.rect.right();
-
-                    ui.painter().line_segment(
-                        [
-                            egui::pos2(line_left, line_y),
-                            egui::pos2(line_right, line_y),
-                        ],
-                        egui::Stroke::new(1.0, stroke_color),
-                    );
-
-                    // --- ROW 2: Content Area (Manually padded underneath the progress bar) ---
                     egui::Frame::default()
-                        // Top margin creates spacing directly below the progress bar.
-                        // Bottom, left, and right use your desired inner margin.
                         .inner_margin(egui::Margin {
-                            top: 4,
-                            left: 4,
+                            left: 12,
                             right: 4,
+                            top: 4,
                             bottom: 4,
                         })
                         .show(ui, |ui| {
@@ -154,132 +199,146 @@ impl Tasks {
                                 ui.with_layout(
                                     egui::Layout::right_to_left(egui::Align::Center),
                                     |ui| {
-                                        let response = ui.add_sized(
-                                            crate::theme::CHILD_BUTTON_V2,
-                                            egui::Button::image(crate::icons::right())
-                                                .corner_radius(0),
-                                        );
-                                        if response.clicked() {
-                                            self.current_task = child_id.clone();
+                                        if let Err(e) = Self::button_section(
+                                            self,
+                                            ui,
+                                            core,
+                                            child_id,
+                                            &mut collapsing_state,
+                                        ) {
+                                            result = Err(e);
                                         }
 
                                         ui.add_space(6.0);
 
-                                        let response = ui.add_sized(
-                                            crate::theme::CHILD_BUTTON_V2,
-                                            egui::Button::image(crate::icons::plus())
-                                                .corner_radius(0),
-                                        );
-                                        if response.clicked() {
-                                            self.current_task = child_id.clone();
-                                        }
-                                        let response = ui.add_sized(
-                                            crate::theme::CHILD_BUTTON_V2,
-                                            egui::Button::image(crate::icons::minus())
-                                                .corner_radius(0),
-                                        );
-                                        if response.clicked() {
-                                            self.current_task = child_id.clone();
-                                        }
-
-                                        ui.add_space(6.0);
-
-                                        let response = ui.add_sized(
-                                            crate::theme::CHILD_BUTTON_V2,
-                                            egui::Button::image(crate::icons::down())
-                                                .corner_radius(0),
-                                        );
-
-                                        if response.clicked() {
-                                            core.tree.remove(child_id.clone());
-                                        }
-
-                                        ui.add_space(6.0);
-
-                                        let response = ui.add_sized(
-                                            crate::theme::CHILD_BUTTON_V2,
-                                            egui::Button::image(crate::icons::trash())
-                                                .corner_radius(0),
-                                        );
-
-                                        if response.clicked() {
-                                            core.tree.remove(child_id.clone());
-                                        }
-
-                                        ui.with_layout(
-                                            egui::Layout::left_to_right(egui::Align::Center),
-                                            |ui| {
-                                                ui.add(
-                                                    egui::Label::new(&child_data.name).truncate(),
-                                                );
-                                            },
-                                        );
+                                        Self::child_label(ui, child_data);
                                     },
                                 );
                             });
                         });
+
+                    collapsing_state.show_body_unindented(ui, |ui| {
+                        egui::Frame::default()
+                            .inner_margin(egui::Margin {
+                                top: 2,
+                                left: 6,
+                                right: 6,
+                                bottom: 6,
+                            })
+                            .show(ui, |ui| {
+                                ui.set_width(ui.available_width());
+                                ui.small("DDescription or child sub-tasks metadata goes here...");
+                                ui.horizontal(|ui| {
+                                    ui.label(egui::RichText::new("ID:").weak());
+                                    ui.small(format!("{child_id:?}"));
+                                });
+                            });
+                    });
                 });
             });
-    }
-}
 
-impl super::View for Tasks {
-    fn main(
+        result
+    }
+
+    #[inline]
+    fn child_progress(ui: &mut egui::Ui, child_data: &application::tree::Node) {
+        ui.add(
+            egui::ProgressBar::new(child_data.task.progress())
+                .corner_radius(0)
+                .fill(crate::theme::FG)
+                .desired_height(17.0)
+                .desired_width(ui.available_width())
+                .text(
+                    egui::RichText::new(format!(
+                        " [ {} / {} ]",
+                        child_data.task.completed, child_data.task.total
+                    ))
+                    .size(10.0)
+                    .color(crate::theme::BORDER)
+                    .strong(),
+                ),
+        );
+
+        ui.add(egui::Separator::default().spacing(0.0));
+    }
+
+    #[inline]
+    fn child_label(ui: &mut egui::Ui, child_data: &application::tree::Node) {
+        ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+            ui.add(egui::Label::new(&child_data.name).truncate());
+        });
+    }
+
+    #[inline]
+    fn button_section(
         &mut self,
         ui: &mut egui::Ui,
         core: &mut application::Core,
+        child_id: &automerge::ObjId,
+        collapsing_state: &mut egui::collapsing_header::CollapsingState,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        Self::top_bar(self, core, ui)?;
-        Self::parent_task(self, core, ui);
-        Self::children(self, core, ui)?;
+        if ui
+            .add_sized(
+                crate::theme::CHILD_BUTTON_V2,
+                egui::Button::image(crate::icons::right()).corner_radius(0),
+            )
+            .clicked()
+        {
+            self.current_task = child_id.clone();
+        }
 
-        let min_button_height = 40.0;
-        let dynamic_height = (ui.available_height() - 8.0).max(min_button_height);
+        ui.add_space(6.0);
 
-        egui::Frame::default()
-            .outer_margin(egui::Margin::symmetric(6, 4))
-            .show(ui, |ui| {
-                ui.set_width(ui.available_width());
+        if ui
+            .add_sized(
+                crate::theme::CHILD_BUTTON_V2,
+                egui::Button::image(crate::icons::plus()).corner_radius(0),
+            )
+            .clicked()
+        {
+            println!("{child_id}::PLUS");
+        }
 
-                let add_btn = egui::Button::new(
-                    egui::RichText::new("+")
-                        .color(ui.visuals().widgets.noninteractive.text_color())
-                        .size(28.0),
-                )
-                .frame(true)
-                .corner_radius(0);
+        if ui
+            .add_sized(
+                crate::theme::CHILD_BUTTON_V2,
+                egui::Button::image(crate::icons::minus()).corner_radius(0),
+            )
+            .clicked()
+        {
+            println!("{child_id}::MINUS");
+        }
 
-                if ui
-                    .add_sized([ui.available_width(), dynamic_height], add_btn)
-                    .clicked()
-                {
-                    let new_node = core
-                        .tree
-                        .append_child(
-                            &self.current_task,
-                            application::tree::node::Node {
-                                name: String::new(),
-                                desc: String::new(),
-                                task: application::tree::node::Progress {
-                                    total: 10,
-                                    completed: 0,
-                                },
-                            },
-                        )
-                        .unwrap();
+        ui.add_space(6.0);
 
-                    self.current_task = new_node;
-                }
-            });
-        Ok(())
-    }
+        let panel_icon = if collapsing_state.is_open() {
+            crate::icons::panel_close()
+        } else {
+            crate::icons::panel_open()
+        };
 
-    fn aside(
-        &mut self,
-        ui: &mut egui::Ui,
-        core: &mut application::Core,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        self.tree_state.show(ui, &core.tree, &mut self.current_task);
+        if ui
+            .add_sized(
+                crate::theme::CHILD_BUTTON_V2,
+                egui::Button::image(panel_icon).corner_radius(0),
+            )
+            .clicked()
+        {
+            collapsing_state.toggle(ui);
+        }
+
+        ui.add_space(6.0);
+
+        if ui
+            .add_sized(
+                crate::theme::CHILD_BUTTON_V2,
+                egui::Button::image(crate::icons::delete()).corner_radius(0),
+            )
+            .clicked()
+        {
+            core.tree.remove(child_id.clone())?;
+        }
+
         Ok(())
     }
 }

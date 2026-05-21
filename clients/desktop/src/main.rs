@@ -133,7 +133,20 @@ impl eframe::App for App {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let app = App::new()?;
+    #[allow(unused_mut)]
+    let mut app = App::new()?;
+
+    // app.core.tree.append_child(
+    //     &automerge::ROOT,
+    //     application::tree::Node {
+    //         name: "MAKE IT LONGERRRRR".into(),
+    //         desc: "aand polite description of that node a bit longer maybe some tesxt wrapping thest idk roll itmend polite description of that node a bit longer maybe some tesxt wrapping thest idk roll itme".into(),
+    //         task: application::tree::node::Progress {
+    //             total: 20,
+    //             completed: 18,
+    //         },
+    //     },
+    // );
 
     Ok(eframe::run_native(
         application::APP_NAME,

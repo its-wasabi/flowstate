@@ -8,7 +8,7 @@ pub struct Stats {
 impl Stats {
     pub fn new() -> Self {
         let x = [
-            application::analytics::Point::new(1.0, 12.0),
+            application::analytics::Point::new(1.0, 0.0),
             application::analytics::Point::new(2.0, 16.0),
             application::analytics::Point::new(3.0, 16.0),
             application::analytics::Point::new(5.0, 18.0),
