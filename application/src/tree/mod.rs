@@ -52,45 +52,35 @@ impl Tree {
         Node::from_doc(&self.document, id)
     }
 
-    // TODO: Rewrite in more idiomatic manner
     pub fn get_progress(&self, id: &automerge::ObjId) -> error::Result<node::Progress> {
-        let mut total = 0;
-        let mut completed = 0;
+        let mut progress = node::Progress::default();
 
-        let has_children = match self.document.get(id, CHILDREN)? {
-            Some((_, list_id)) => self.document.length(&list_id) > 0,
-            None => false,
-        };
+        match self.document.get(id, CHILDREN)? {
+            Some((_, list_id)) if self.document.length(&list_id) > 0 => {
+                let list_len = self.document.length(&list_id);
+                for idx in 0..list_len {
+                    let (_, child_id) = self
+                        .document
+                        .get(&list_id, idx)?
+                        .ok_or(error::TreeError::MissingProperty)?;
 
-        if has_children {
-            let Some((_, list_id)) = self.document.get(id, CHILDREN)? else {
-                unreachable!()
-            };
-
-            let list_len = self.document.length(&list_id);
-            for i in 0..list_len {
-                let (_, child_id) = self
-                    .document
-                    .get(&list_id, i)?
-                    .ok_or(error::TreeError::MissingProperty)?;
-
-                let child_progress = self.get_progress(&child_id)?;
-                total += child_progress.total;
-                completed += child_progress.completed;
-            }
-        } else {
-            if id == &automerge::ObjId::Root {
-                return Ok(node::Progress {
-                    total: 0,
-                    completed: 0,
-                });
+                    progress = progress + self.get_progress(&child_id)?;
+                }
             }
 
-            let node = self.get_node(id)?;
-            return Ok(node.progress);
+            _ => {
+                if id == &automerge::ROOT {
+                    return Ok(node::Progress {
+                        total: 0,
+                        completed: 0,
+                    });
+                }
+
+                return Ok(self.get_node(id)?.progress);
+            }
         }
 
-        Ok(node::Progress { total, completed })
+        Ok(progress)
     }
 }
 

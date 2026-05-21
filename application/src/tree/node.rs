@@ -1,3 +1,5 @@
+use std::ops::Add;
+
 #[derive(Debug, Clone)]
 pub struct Progress {
     pub total: u64,
@@ -9,6 +11,25 @@ impl Progress {
     #[allow(clippy::cast_precision_loss)]
     pub fn progress(&self) -> f32 {
         self.completed as f32 / self.total as f32
+    }
+}
+
+impl Default for Progress {
+    fn default() -> Self {
+        Self {
+            total: 0,
+            completed: 0,
+        }
+    }
+}
+
+impl Add for Progress {
+    type Output = Self;
+    fn add(self, rhs: Self) -> Self::Output {
+        Self {
+            total: self.total + rhs.total,
+            completed: self.completed + rhs.completed,
+        }
     }
 }
 
