@@ -1,20 +1,6 @@
 use egui::{Image, TextureOptions, include_image};
 
 #[inline]
-pub fn up() -> Image<'static> {
-    Image::new(include_image!("../../assets/icons/up.svg"))
-        .maintain_aspect_ratio(true)
-        .texture_options(TextureOptions::NEAREST)
-}
-
-#[inline]
-pub fn down() -> Image<'static> {
-    Image::new(include_image!("../../assets/icons/down.svg"))
-        .maintain_aspect_ratio(true)
-        .texture_options(TextureOptions::NEAREST)
-}
-
-#[inline]
 pub fn left() -> Image<'static> {
     Image::new(include_image!("../../assets/icons/left.svg"))
         .maintain_aspect_ratio(true)
@@ -43,8 +29,29 @@ pub fn minus() -> Image<'static> {
 }
 
 #[inline]
-pub fn trash() -> Image<'static> {
-    Image::new(include_image!("../../assets/icons/trash.svg"))
+pub fn delete() -> Image<'static> {
+    Image::new(include_image!("../../assets/icons/delete.svg"))
+        .maintain_aspect_ratio(true)
+        .texture_options(TextureOptions::NEAREST)
+}
+
+#[inline]
+pub fn panel_open() -> Image<'static> {
+    Image::new(include_image!("../../assets/icons/panel-open.svg"))
+        .maintain_aspect_ratio(true)
+        .texture_options(TextureOptions::NEAREST)
+}
+
+#[inline]
+pub fn panel_close() -> Image<'static> {
+    Image::new(include_image!("../../assets/icons/panel-close.svg"))
+        .maintain_aspect_ratio(true)
+        .texture_options(TextureOptions::NEAREST)
+}
+
+#[inline]
+pub fn settings() -> Image<'static> {
+    Image::new(include_image!("../../assets/icons/settings.svg"))
         .maintain_aspect_ratio(true)
         .texture_options(TextureOptions::NEAREST)
 }

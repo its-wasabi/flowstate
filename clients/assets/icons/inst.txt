@@ -1,2 +1,3 @@
+lucide.dev
 stroke width 1.5px
 size 16px
