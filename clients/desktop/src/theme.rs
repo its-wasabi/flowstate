@@ -1,3 +1,4 @@
+use eframe::wgpu::naga::BOOL_WIDTH;
 use egui::{
     Color32, Stroke, Visuals,
     style::{Selection, WidgetVisuals, Widgets},
@@ -10,6 +11,8 @@ pub const PARENT_BUTTON: f32 = 40.0;
 pub const PARENT_BUTTON_V2: [f32; 2] = [PARENT_BUTTON, PARENT_BUTTON];
 pub const CHILD_BUTTON: f32 = 30.0;
 pub const CHILD_BUTTON_V2: [f32; 2] = [CHILD_BUTTON, CHILD_BUTTON];
+
+pub const BORDER_WIDTH: f32 = 1.1;
 
 pub const FG: Color32 = Color32::WHITE;
 pub const BG: Color32 = Color32::BLACK;
@@ -26,7 +29,7 @@ pub fn apply(cc: &eframe::CreationContext) {
     v.panel_fill = BG;
     v.window_shadow = egui::Shadow::NONE;
     v.popup_shadow = egui::Shadow::NONE;
-    v.window_stroke = Stroke::new(1.0, BORDER);
+    v.window_stroke = Stroke::new(BORDER_WIDTH, BORDER);
 
     v.selection = Selection {
         bg_fill: ASIDE_BG,
@@ -36,7 +39,7 @@ pub fn apply(cc: &eframe::CreationContext) {
     let flat = |bg: Color32, text: Color32, border: Color32| WidgetVisuals {
         bg_fill: bg,
         weak_bg_fill: bg,
-        bg_stroke: Stroke::new(1.0, border),
+        bg_stroke: Stroke::new(BOOL_WIDTH, border),
         fg_stroke: Stroke::new(1.0, text),
         corner_radius: egui::CornerRadius::ZERO,
         expansion: 0.0,
@@ -46,7 +49,7 @@ pub fn apply(cc: &eframe::CreationContext) {
         noninteractive: WidgetVisuals {
             bg_fill: BG,
             weak_bg_fill: BG,
-            bg_stroke: Stroke::new(1.0, BORDER),
+            bg_stroke: Stroke::new(BORDER_WIDTH, BORDER),
             fg_stroke: Stroke::new(1.0, FG),
             corner_radius: egui::CornerRadius::ZERO,
             expansion: 0.0,
