@@ -45,13 +45,23 @@ impl Tasks {
     fn parent_task(&mut self, core: &application::Core, ui: &mut egui::Ui) {
         if let Ok(node) = core.tree.get_node(&self.current_task) {
             ui.horizontal(|ui| {
-                if crate::theme::styled_square_button(ui, "◀", 50.0).clicked() {
-                    if let Ok((id, _)) = core.tree.get_parent(&self.current_task) {
-                        self.current_task = id;
-                    } else {
-                        self.current_task = automerge::ROOT;
-                    }
-                }
+                egui::Frame::default()
+                    .outer_margin(egui::Margin::same(4))
+                    .show(ui, |ui| {
+                        if ui
+                            .add_sized(
+                                crate::theme::PARENT_BUTTON_V2,
+                                egui::Button::image(crate::icons::left()),
+                            )
+                            .clicked()
+                        {
+                            if let Ok((id, _)) = core.tree.get_parent(&self.current_task) {
+                                self.current_task = id;
+                            } else {
+                                self.current_task = automerge::ROOT;
+                            }
+                        }
+                    });
 
                 egui::Frame::default()
                     .outer_margin(egui::Margin::symmetric(2, 6))
@@ -134,70 +144,65 @@ impl Tasks {
                         // Top margin creates spacing directly below the progress bar.
                         // Bottom, left, and right use your desired inner margin.
                         .inner_margin(egui::Margin {
+                            top: 4,
                             left: 4,
-                            ..Default::default()
+                            right: 4,
+                            bottom: 4,
                         })
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
                                 ui.with_layout(
                                     egui::Layout::right_to_left(egui::Align::Center),
                                     |ui| {
-                                        let btn_size = 24.0;
-
-                                        if crate::theme::flex_square_button(
-                                            ui,
-                                            egui::RichText::new("▶"),
-                                            btn_size,
-                                        )
-                                        .clicked()
-                                        {
+                                        let response = ui.add_sized(
+                                            crate::theme::CHILD_BUTTON_V2,
+                                            egui::Button::image(crate::icons::right())
+                                                .corner_radius(0),
+                                        );
+                                        if response.clicked() {
                                             self.current_task = child_id.clone();
                                         }
 
-                                        ui.add_space(2.0);
+                                        ui.add_space(6.0);
 
-                                        if crate::theme::flex_square_button(
-                                            ui,
-                                            egui::RichText::new("▼"),
-                                            btn_size,
-                                        )
-                                        .clicked()
-                                        {
-                                            // Settings action
+                                        let response = ui.add_sized(
+                                            crate::theme::CHILD_BUTTON_V2,
+                                            egui::Button::image(crate::icons::plus())
+                                                .corner_radius(0),
+                                        );
+                                        if response.clicked() {
+                                            self.current_task = child_id.clone();
+                                        }
+                                        let response = ui.add_sized(
+                                            crate::theme::CHILD_BUTTON_V2,
+                                            egui::Button::image(crate::icons::minus())
+                                                .corner_radius(0),
+                                        );
+                                        if response.clicked() {
+                                            self.current_task = child_id.clone();
                                         }
 
-                                        ui.add_space(2.0);
+                                        ui.add_space(6.0);
 
-                                        if crate::theme::flex_square_button(
-                                            ui,
-                                            egui::RichText::new("↓"),
-                                            btn_size,
-                                        )
-                                        .clicked()
-                                        {
-                                            // Move down action
-                                        }
-                                        if crate::theme::flex_square_button(
-                                            ui,
-                                            egui::RichText::new("↑"),
-                                            btn_size,
-                                        )
-                                        .clicked()
-                                        {
-                                            // Move up action
+                                        let response = ui.add_sized(
+                                            crate::theme::CHILD_BUTTON_V2,
+                                            egui::Button::image(crate::icons::down())
+                                                .corner_radius(0),
+                                        );
+
+                                        if response.clicked() {
+                                            core.tree.remove(child_id.clone());
                                         }
 
-                                        ui.add_space(2.0);
+                                        ui.add_space(6.0);
 
-                                        if crate::theme::flex_square_button(
-                                            ui,
-                                            egui::RichText::new("DEL")
-                                                .color(egui::Color32::DARK_RED)
-                                                .strong(),
-                                            btn_size,
-                                        )
-                                        .clicked()
-                                        {
+                                        let response = ui.add_sized(
+                                            crate::theme::CHILD_BUTTON_V2,
+                                            egui::Button::image(crate::icons::trash())
+                                                .corner_radius(0),
+                                        );
+
+                                        if response.clicked() {
                                             core.tree.remove(child_id.clone());
                                         }
 

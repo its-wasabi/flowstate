@@ -6,6 +6,11 @@ use egui::{
 pub const TOP_BAR_HEIGHT: f32 = 21.0;
 pub const NAV_MIN_WIDTH: f32 = 210.0;
 
+pub const PARENT_BUTTON: f32 = 48.0;
+pub const PARENT_BUTTON_V2: [f32; 2] = [PARENT_BUTTON, PARENT_BUTTON];
+pub const CHILD_BUTTON: f32 = 30.0;
+pub const CHILD_BUTTON_V2: [f32; 2] = [CHILD_BUTTON, CHILD_BUTTON];
+
 pub const FG: Color32 = Color32::WHITE;
 pub const BG: Color32 = Color32::BLACK;
 pub const ASIDE_BG: Color32 = Color32::from_gray(40);
@@ -82,26 +87,4 @@ pub fn apply(cc: &eframe::CreationContext) {
     }
 
     cc.egui_ctx.set_fonts(fonts);
-}
-
-pub fn styled_square_button(ui: &mut egui::Ui, label: &str, row_height: f32) -> egui::Response {
-    let margin = 7.0;
-    let square_size = (row_height - (margin * 2.0)).max(0.0);
-
-    #[allow(clippy::cast_possible_truncation)]
-    egui::Frame::default()
-        .outer_margin(egui::Margin::same(margin as i8))
-        .show(ui, |ui| {
-            ui.add_sized([square_size, square_size], egui::Button::new(label))
-        })
-        .inner
-}
-
-pub fn flex_square_button(ui: &mut egui::Ui, label: egui::RichText, size: f32) -> egui::Response {
-    ui.add(
-        egui::Button::new(label)
-            // Forces height to `size`, and minimum width to `size`.
-            // If the label is wider, it will automatically grow.
-            .min_size(egui::vec2(size, size)),
-    )
 }

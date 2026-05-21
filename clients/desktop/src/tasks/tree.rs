@@ -93,7 +93,11 @@ impl TreeState {
             ui.painter().text(
                 text_pos,
                 egui::Align2::LEFT_CENTER,
-                &node_data.name,
+                if node_data.name.is_empty() {
+                    "[no name]"
+                } else {
+                    &node_data.name
+                },
                 text_font_id,
                 text_color,
             );

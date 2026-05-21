@@ -4,7 +4,7 @@ pub struct Point(pub [f64; 2]);
 
 impl Point {
     #[must_use]
-    const fn new(x: f64, y: f64) -> Self {
+    pub const fn new(x: f64, y: f64) -> Self {
         Self([x, y])
     }
 

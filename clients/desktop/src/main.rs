@@ -1,4 +1,5 @@
 mod config;
+mod icons;
 mod stats;
 mod tasks;
 mod theme;
@@ -143,6 +144,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ..Default::default()
         },
         Box::new(|cc| {
+            egui_extras::install_image_loaders(&cc.egui_ctx);
             theme::apply(cc);
             Ok(Box::new(app) as _)
         }),
