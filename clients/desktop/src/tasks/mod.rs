@@ -290,28 +290,6 @@ impl Tasks {
 
         ui.add_space(6.0);
 
-        if ui
-            .add_sized(
-                crate::theme::CHILD_BUTTON_V2,
-                egui::Button::image(crate::icons::plus()).corner_radius(0),
-            )
-            .clicked()
-        {
-            println!("{child_id}::PLUS");
-        }
-
-        if ui
-            .add_sized(
-                crate::theme::CHILD_BUTTON_V2,
-                egui::Button::image(crate::icons::minus()).corner_radius(0),
-            )
-            .clicked()
-        {
-            println!("{child_id}::MINUS");
-        }
-
-        ui.add_space(6.0);
-
         let panel_icon = if collapsing_state.is_open() {
             crate::icons::panel_close()
         } else {
@@ -336,8 +314,35 @@ impl Tasks {
                 egui::Button::image(crate::icons::delete()).corner_radius(0),
             )
             .clicked()
+            && let Err(err) = core.tree.remove(child_id)
         {
-            core.tree.remove(child_id.clone())?;
+            eprintln!("{err:?}");
+        }
+
+        if core.tree.is_leaf(child_id)? {
+            ui.add_space(8.0);
+
+            if ui
+                .add_sized(
+                    crate::theme::CHILD_BUTTON_V2,
+                    egui::Button::image(crate::icons::plus()).corner_radius(0),
+                )
+                .clicked()
+                && let Err(err) = core.tree.change_progress_completed(child_id, 1)
+            {
+                eprintln!("{err:?}");
+            }
+
+            if ui
+                .add_sized(
+                    crate::theme::CHILD_BUTTON_V2,
+                    egui::Button::image(crate::icons::minus()).corner_radius(0),
+                )
+                .clicked()
+                && let Err(err) = core.tree.change_progress_completed(child_id, -1)
+            {
+                eprintln!("{err:?}");
+            }
         }
 
         Ok(())

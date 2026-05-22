@@ -114,9 +114,9 @@ impl eframe::App for App {
                         ui.set_width(ui.available_width());
 
                         match self.current_tab {
-                            Tab::Tasks => self.tasks.aside(ui, &mut self.core),
-                            Tab::Stats => self.stats.aside(ui, &mut self.core),
-                            Tab::Config => self.config.aside(ui, &mut self.core),
+                            Tab::Tasks => self.tasks.aside(ui, &mut self.core).unwrap(),
+                            Tab::Stats => self.stats.aside(ui, &mut self.core).unwrap(),
+                            Tab::Config => self.config.aside(ui, &mut self.core).unwrap(),
                         }
                     })
             });
@@ -124,28 +124,15 @@ impl eframe::App for App {
         egui::CentralPanel::default()
             .frame(egui::Frame::default())
             .show_inside(ui, |ui| match self.current_tab {
-                Tab::Tasks => self.tasks.main(ui, &mut self.core),
-                Tab::Stats => self.stats.main(ui, &mut self.core),
-                Tab::Config => self.config.main(ui, &mut self.core),
+                Tab::Tasks => self.tasks.main(ui, &mut self.core).unwrap(),
+                Tab::Stats => self.stats.main(ui, &mut self.core).unwrap(),
+                Tab::Config => self.config.main(ui, &mut self.core).unwrap(),
             });
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    #[allow(unused_mut)]
-    let mut app = App::new()?;
-
-    // app.core.tree.append_child(
-    //     &automerge::ROOT,
-    //     application::tree::Node {
-    //         name: "HELLO".into(),
-    //         desc: "woah hello really".into(),
-    //         task: application::tree::node::Progress {
-    //             total: 39,
-    //             completed: 18,
-    //         },
-    //     },
-    // );
+    let app = App::new()?;
 
     Ok(eframe::run_native(
         application::APP_NAME,

@@ -12,7 +12,7 @@ pub const PARENT_BUTTON_V2: [f32; 2] = [PARENT_BUTTON, PARENT_BUTTON];
 pub const CHILD_BUTTON: f32 = 30.0;
 pub const CHILD_BUTTON_V2: [f32; 2] = [CHILD_BUTTON, CHILD_BUTTON];
 
-pub const BORDER_WIDTH: f32 = 1.1;
+pub const BORDER_WIDTH: f32 = 1.2;
 
 pub const FG: Color32 = Color32::WHITE;
 pub const BG: Color32 = Color32::BLACK;

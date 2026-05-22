@@ -15,7 +15,7 @@ pub mod peer;
 pub mod storage;
 pub mod tree;
 
-pub const APP_NAME: &str = "Flowstate";
+pub const APP_NAME: &str = "flowstate";
 pub const APP_VERSION: (u32, u32, u32) = utils::crate_version!();
 
 const DOCUMENT_SAVE_PATH: &str = "data.bin";
