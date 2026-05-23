@@ -10,7 +10,7 @@ impl Progress {
     #[must_use]
     pub const fn new(completed: u32, total: u32) -> Self {
         assert!(
-            completed < total,
+            completed <= total,
             "Completed should never be bigger than total"
         );
 
@@ -29,16 +29,16 @@ impl Progress {
 
     #[must_use]
     #[inline]
-    pub fn procentage(&self) -> f32 {
+    pub const fn procentage(&self) -> f32 {
         if self.total == 0 {
             return 0.0;
         }
 
-        #[allow(clippy::cast_lossless)]
-        #[allow(clippy::cast_possible_truncation)]
+        let pct = (self.completed as u64 * 100) / self.total as u64;
+
+        #[allow(clippy::cast_precision_loss)]
         {
-            let ratio = self.completed as f64 / self.total as f64;
-            ((ratio * 100.0).floor() / 100.0) as f32
+            pct as f32
         }
     }
 }
@@ -52,7 +52,7 @@ impl std::ops::AddAssign for Progress {
 
 impl std::fmt::Display for Progress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.procentage() * 100.0)
+        write!(f, "{}", self.procentage())
     }
 }
 
