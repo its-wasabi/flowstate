@@ -63,17 +63,14 @@ impl Tasks {
             .exact_size(crate::theme::TOP_BAR_HEIGHT)
             .show_inside(ui, |ui| {
                 ui.add(
-                    egui::ProgressBar::new(progress.progress())
+                    egui::ProgressBar::new(progress.procentage())
                         .corner_radius(0)
                         .fill(crate::theme::FG)
                         .desired_height(ui.available_height())
                         .desired_width(ui.available_width())
                         .text(
-                            egui::RichText::new(format!(
-                                " [ {} / {} ]",
-                                progress.completed, progress.total
-                            ))
-                            .color(crate::theme::BORDER),
+                            egui::RichText::new(format!(" [ {progress} ]"))
+                                .color(crate::theme::BORDER),
                         ),
                 );
             });
@@ -132,10 +129,7 @@ impl Tasks {
                         application::tree::node::Node {
                             name: String::new(),
                             desc: String::new(),
-                            progress: application::tree::node::Progress {
-                                total: 10,
-                                completed: 0,
-                            },
+                            progress: application::tree::node::Progress::new(0, 10),
                         },
                     )
                 {
@@ -244,7 +238,7 @@ impl Tasks {
     #[inline]
     fn child_progress(ui: &mut egui::Ui, child_data: &application::tree::Node) {
         ui.add(
-            egui::ProgressBar::new(child_data.progress.progress())
+            egui::ProgressBar::new(child_data.progress.procentage())
                 .corner_radius(0)
                 .fill(crate::theme::FG)
                 .desired_height(17.0)
@@ -252,7 +246,8 @@ impl Tasks {
                 .text(
                     egui::RichText::new(format!(
                         " [ {} / {} ]",
-                        child_data.progress.completed, child_data.progress.total
+                        child_data.progress.completed(),
+                        child_data.progress.total()
                     ))
                     .size(10.0)
                     .color(crate::theme::BORDER)

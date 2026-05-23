@@ -1,7 +1,7 @@
 pub struct Config {}
 
 impl Config {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {}
     }
 }
@@ -10,7 +10,7 @@ impl super::View for Config {
     fn main(
         &mut self,
         ui: &mut egui::Ui,
-        core: &mut application::Core,
+        _core: &mut application::Core,
     ) -> Result<(), Box<dyn std::error::Error>> {
         egui::Frame::default().inner_margin(12.0).show(ui, |ui| {
             ui.heading("System info");
@@ -35,7 +35,7 @@ impl super::View for Config {
     fn aside(
         &mut self,
         ui: &mut egui::Ui,
-        core: &mut application::Core,
+        _core: &mut application::Core,
     ) -> Result<(), Box<dyn std::error::Error>> {
         ui.centered_and_justified(|ui| {
             ui.heading("empty");

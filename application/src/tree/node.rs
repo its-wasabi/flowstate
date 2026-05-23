@@ -1,32 +1,58 @@
-use std::{
-    iter::Product,
-    ops::{Add, AddAssign},
-};
-
-use automerge::ScalarValue;
-
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Progress {
-    pub total: u32,
-    pub completed: u32,
+    total: u32,
+    completed: u32,
 }
 
 impl Progress {
+    /// # Panics
+    /// Panics if completed is bigger than total
     #[must_use]
-    #[allow(clippy::cast_precision_loss)]
-    pub fn progress(&self) -> f32 {
+    pub const fn new(completed: u32, total: u32) -> Self {
+        assert!(
+            completed < total,
+            "Completed should never be bigger than total"
+        );
+
+        Self { total, completed }
+    }
+
+    #[must_use]
+    pub const fn total(&self) -> u32 {
+        self.total
+    }
+
+    #[must_use]
+    pub const fn completed(&self) -> u32 {
+        self.completed
+    }
+
+    #[must_use]
+    #[inline]
+    pub fn procentage(&self) -> f32 {
         if self.total == 0 {
             return 0.0;
         }
 
-        self.completed as f32 / self.total as f32
+        #[allow(clippy::cast_lossless)]
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            let ratio = self.completed as f64 / self.total as f64;
+            ((ratio * 100.0).floor() / 100.0) as f32
+        }
     }
 }
 
-impl AddAssign for Progress {
+impl std::ops::AddAssign for Progress {
     fn add_assign(&mut self, rhs: Self) {
         self.total = self.total + rhs.total;
         self.completed = self.completed + rhs.completed;
+    }
+}
+
+impl std::fmt::Display for Progress {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.procentage() * 100.0)
     }
 }
 

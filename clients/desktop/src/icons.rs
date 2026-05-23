@@ -50,13 +50,6 @@ pub fn panel_close() -> Image<'static> {
 }
 
 #[inline]
-pub fn settings() -> Image<'static> {
-    Image::new(include_image!("../../assets/icons/settings.svg"))
-        .maintain_aspect_ratio(true)
-        .texture_options(TextureOptions::NEAREST)
-}
-
-#[inline]
 pub fn add() -> Image<'static> {
     Image::new(include_image!("../../assets/icons/add.svg"))
         .maintain_aspect_ratio(true)
