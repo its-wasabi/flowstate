@@ -63,13 +63,13 @@ impl Tasks {
             .exact_size(crate::theme::TOP_BAR_HEIGHT)
             .show_inside(ui, |ui| {
                 ui.add(
-                    egui::ProgressBar::new(progress.procentage())
+                    egui::ProgressBar::new(progress.procentage() / 100.0)
                         .corner_radius(0)
                         .fill(crate::theme::FG)
                         .desired_height(ui.available_height())
                         .desired_width(ui.available_width())
                         .text(
-                            egui::RichText::new(format!(" [ {progress} ]"))
+                            egui::RichText::new(format!(" {progress}%"))
                                 .color(crate::theme::BORDER),
                         ),
                 );
@@ -242,13 +242,13 @@ impl Tasks {
     #[inline]
     fn child_progress(ui: &mut egui::Ui, child_data: &application::tree::Node) {
         ui.add(
-            egui::ProgressBar::new(child_data.progress.procentage())
+            egui::ProgressBar::new(child_data.progress.procentage() / 100.0)
                 .corner_radius(0)
                 .fill(crate::theme::FG)
                 .desired_height(17.0)
                 .desired_width(ui.available_width())
                 .text(
-                    egui::RichText::new(format!(" [ {} ]", child_data.progress))
+                    egui::RichText::new(format!(" {}%", child_data.progress))
                         .size(10.0)
                         .color(crate::theme::BORDER)
                         .strong(),

@@ -1,3 +1,5 @@
+// TODO: Add icons to tree as customization option
+
 pub struct TreeState;
 
 impl TreeState {
