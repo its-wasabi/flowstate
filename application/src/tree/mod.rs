@@ -230,26 +230,24 @@ impl Tree {
             .document
             .get(id, NODE_TASK_COMPLETED)?
             .ok_or(error::TreeError::InvalidNodeType)?;
-        let current = match completed_val.into_scalar() {
+        let current_completed = match completed_val.into_scalar() {
             Ok(ScalarValue::Counter(c)) => i64::try_from(c).unwrap_or(0),
             _ => return Err(error::TreeError::InvalidNodeType),
         };
 
-        let next = current + delta;
-        let clamped = next.max(0).min(total as i64);
-        let diff = clamped - current;
+        let safe_delta = {
+            let safe_base = current_completed.clamp(0, total as i64);
+            let safe_target = (safe_base + delta).clamp(0, total as i64);
+            safe_target - current_completed
+        };
 
-        if diff == 0 {
-            return Ok(());
+        if safe_delta != 0 {
+            let mut tx = self.document.transaction();
+            tx.increment(id, NODE_TASK_COMPLETED, safe_delta)?;
+            tx.commit();
+
+            self.projection.update_path(&self.document, id.clone())?;
         }
-
-        // Edit Automerge
-        let mut tx = self.document.transaction();
-        tx.increment(id, NODE_TASK_COMPLETED, diff)?;
-        tx.commit();
-
-        // Recalculate progress upwards
-        self.projection.update_path(&self.document, id.clone())?;
 
         Ok(())
     }

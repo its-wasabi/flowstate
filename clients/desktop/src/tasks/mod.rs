@@ -148,8 +148,12 @@ impl Tasks {
             .content_margin(egui::Margin::symmetric(0, 0))
             .show(ui, |ui| -> Result<(), Box<dyn std::error::Error>> {
                 if let Ok(children) = core.tree.get_children(&self.current_task) {
-                    for (child_id, child_data) in children {
-                        Self::child(self, ui, core, &child_id, &child_data)?;
+                    if children.is_empty() {
+                        ui.centered_and_justified(|ui| ui.heading("TODO: Control panel"));
+                    } else {
+                        for (child_id, child_data) in children {
+                            Self::child(self, ui, core, &child_id, &child_data)?;
+                        }
                     }
                 }
                 Ok(())
@@ -244,14 +248,10 @@ impl Tasks {
                 .desired_height(17.0)
                 .desired_width(ui.available_width())
                 .text(
-                    egui::RichText::new(format!(
-                        " [ {} / {} ]",
-                        child_data.progress.completed(),
-                        child_data.progress.total()
-                    ))
-                    .size(10.0)
-                    .color(crate::theme::BORDER)
-                    .strong(),
+                    egui::RichText::new(format!(" [ {} ]", child_data.progress))
+                        .size(10.0)
+                        .color(crate::theme::BORDER)
+                        .strong(),
                 ),
         );
 

@@ -13,14 +13,15 @@ pub struct Projection {
 
 impl Projection {
     pub(super) fn new(document: &automerge::Automerge) -> super::error::Result<Self> {
-        let mut proj = Self {
+        let mut projection = Self {
             changes: document.get_heads(),
             nodes: HashMap::new(),
             children: HashMap::new(),
             root_progress: super::node::Progress::default(),
         };
-        proj.rebuild(document)?;
-        Ok(proj)
+        projection.rebuild(document)?;
+
+        Ok(projection)
     }
 }
 
@@ -35,7 +36,6 @@ impl Projection {
 impl Projection {
     pub(super) fn rebuild(&mut self, document: &automerge::Automerge) -> super::error::Result<()> {
         self.clear();
-
         self.build_recursive(document, &automerge::ObjId::Root)?;
         self.changes = document.get_heads();
 
@@ -63,15 +63,15 @@ impl Projection {
         self.children.insert(id.clone(), child_ids.clone());
 
         if id == &automerge::ObjId::Root {
-            self.root_progress = root_progress.clone();
+            self.root_progress = root_progress;
             return Ok(root_progress);
         }
 
         if let Ok(mut node_data) = super::node::Node::from_doc(document, id) {
             if child_ids.is_empty() {
-                root_progress = node_data.progress.clone();
+                root_progress = node_data.progress;
             } else {
-                node_data.progress = root_progress.clone();
+                node_data.progress = root_progress;
             }
             self.nodes.insert(id.clone(), node_data);
         }
@@ -96,7 +96,7 @@ impl Projection {
             } else {
                 for cid in &child_ids {
                     if let Some(child_node) = self.nodes.get(cid) {
-                        new_progress += child_node.progress.clone();
+                        new_progress += child_node.progress;
                     }
                 }
             }
