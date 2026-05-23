@@ -122,7 +122,7 @@ impl eframe::App for App {
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::default())
+            .frame(egui::Frame::default().fill(theme::BG))
             .show_inside(ui, |ui| match self.current_tab {
                 Tab::Tasks => self.tasks.main(ui, &mut self.core).unwrap(),
                 Tab::Stats => self.stats.main(ui, &mut self.core).unwrap(),
@@ -139,7 +139,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         eframe::NativeOptions {
             viewport: egui::ViewportBuilder::default()
                 .with_title(application::APP_NAME)
-                .with_app_id(application::APP_NAME),
+                .with_app_id(application::APP_NAME)
+                // TODO: Make that transparent configurable
+                .with_transparent(true),
+
             ..Default::default()
         },
         Box::new(|cc| {

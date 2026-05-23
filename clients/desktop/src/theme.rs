@@ -15,8 +15,9 @@ pub const CHILD_BUTTON_V2: [f32; 2] = [CHILD_BUTTON, CHILD_BUTTON];
 pub const BORDER_WIDTH: f32 = 1.2;
 
 pub const FG: Color32 = Color32::WHITE;
-pub const BG: Color32 = Color32::BLACK;
-pub const ASIDE_BG: Color32 = Color32::from_gray(40);
+pub const BG: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 255);
+// TODO: Make that alpha configurable
+pub const ASIDE_BG: Color32 = Color32::from_rgba_premultiplied(20, 20, 20, 160);
 
 pub const BORDER: Color32 = Color32::from_gray(100);
 
