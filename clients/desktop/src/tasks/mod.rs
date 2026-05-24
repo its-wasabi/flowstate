@@ -32,7 +32,7 @@ impl super::View for Tasks {
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::default())
+            .frame(egui::Frame::default().fill(crate::theme::BG))
             .show_inside(ui, |ui| Self::children(self, ui, core))
             .inner?;
 
@@ -59,7 +59,7 @@ impl Tasks {
         let progress = core.tree.get_progress(&self.current_task)?;
 
         egui::Panel::top("tasks_top_bar")
-            .frame(egui::Frame::default())
+            .frame(egui::Frame::default().fill(crate::theme::BG))
             .exact_size(crate::theme::TOP_BAR_HEIGHT)
             .show_inside(ui, |ui| {
                 ui.add(
@@ -82,7 +82,7 @@ impl Tasks {
     fn parent_task(&mut self, core: &application::Core, ui: &mut egui::Ui) {
         if let Ok(node) = core.tree.get_node(&self.current_task) {
             egui::Panel::top("panel_parent_task")
-                .frame(egui::Frame::default())
+                .frame(egui::Frame::default().fill(crate::theme::BG))
                 .show_inside(ui, |ui| {
                     ui.horizontal(|ui| {
                         egui::Frame::default()
@@ -118,9 +118,9 @@ impl Tasks {
 
     #[inline]
     fn add_button(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        egui::Frame::default()
-            .inner_margin(egui::Margin::same(4))
-            .show(ui, |ui| {
+        egui::Panel::bottom("panel_bottom_add_button")
+            .frame(egui::Frame::default().fill(crate::theme::BG))
+            .show_inside(ui, |ui| {
                 let button_size = egui::vec2(ui.available_width(), crate::theme::CHILD_BUTTON);
                 let add_btn = egui::Button::image(crate::icons::add());
                 if ui.add_sized(button_size, add_btn).clicked()

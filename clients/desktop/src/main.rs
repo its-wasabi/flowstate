@@ -122,7 +122,7 @@ impl eframe::App for App {
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::default().fill(theme::BG))
+            .frame(egui::Frame::default())
             .show_inside(ui, |ui| match self.current_tab {
                 Tab::Tasks => self.tasks.main(ui, &mut self.core).unwrap(),
                 Tab::Stats => self.stats.main(ui, &mut self.core).unwrap(),
