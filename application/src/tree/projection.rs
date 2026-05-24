@@ -128,7 +128,10 @@ impl Projection {
         document: &automerge::Automerge,
     ) -> super::error::Result<()> {
         let node = super::node::Node::from_doc(document, &id)?;
-        self.nodes.entry(id).insert_entry(node);
+        self.nodes.entry(id).and_modify(|stored_node| {
+            stored_node.name = node.name;
+            stored_node.desc = node.desc;
+        });
         Ok(())
     }
 
