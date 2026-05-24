@@ -24,6 +24,7 @@ impl super::View for Tasks {
         core: &mut application::Core,
     ) -> Result<(), Box<dyn std::error::Error>> {
         Self::top_bar(self, core, ui)?;
+
         Self::parent_task(self, core, ui);
 
         egui::Panel::bottom("add_button_container")
@@ -58,6 +59,7 @@ impl Tasks {
         ui: &mut egui::Ui,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let progress = core.tree.get_progress(&self.current_task)?;
+        println!("progress: {progress} -> {}", progress.procentage() / 100.0);
 
         egui::Panel::top("tasks_top_bar")
             .frame(egui::Frame::default())
@@ -111,6 +113,8 @@ impl Tasks {
                             .outer_margin(egui::Margin::symmetric(2, 6))
                             .show(ui, |ui| {
                                 ui.vertical(|ui| {
+                                    // TODO: Change that to write to projection on .changed() and to
+                                    // automerge on .focus_lost()
                                     let name_edit = ui.add(
                                         egui::TextEdit::singleline(&mut node.name)
                                             .font(egui::TextStyle::Heading)
@@ -127,6 +131,8 @@ impl Tasks {
                                         eprintln!("FAILED: To commit name {err:?}");
                                     }
 
+                                    // TODO: Change that to write to projection on .changed() and to
+                                    // automerge on .focus_lost()
                                     let desc_edit = ui.add(
                                         egui::TextEdit::multiline(&mut node.desc)
                                             .font(egui::TextStyle::Body)
@@ -227,7 +233,7 @@ impl Tasks {
 
                     egui::Frame::default()
                         .inner_margin(egui::Margin {
-                            left: 12,
+                            left: 11,
                             right: 4,
                             top: 4,
                             bottom: 4,
@@ -276,12 +282,12 @@ impl Tasks {
 
     #[inline]
     fn child_progress(ui: &mut egui::Ui, child_data: &application::tree::Node) {
-        ui.add(
+        ui.add_sized(
+            [ui.available_width(), 18.0],
             egui::ProgressBar::new(child_data.progress.procentage() / 100.0)
                 .corner_radius(0)
                 .fill(crate::appearance::FG)
                 .desired_height(18.0)
-                .desired_width(ui.available_width())
                 .text(
                     egui::RichText::new(format!(" {}%", child_data.progress))
                         .size(13.0)
@@ -301,8 +307,8 @@ impl Tasks {
         mut node: application::tree::Node,
     ) {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-            // TODO: Make these updates take place immediately in the Projection but
-            // apply them to automerge only on focus loss
+            // TODO: Change that to write to projection on .changed() and to
+            // automerge on .focus_lost()
             let name_edit = ui.add(
                 egui::TextEdit::singleline(&mut node.name)
                     .font(egui::TextStyle::Button)
