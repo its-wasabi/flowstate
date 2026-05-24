@@ -200,6 +200,10 @@ impl Tree {
         Ok(())
     }
 
+    pub fn change_node_name_cache(&mut self, id: &automerge::ObjId, name: String) {
+        self.projection.update_node_name(id, name);
+    }
+
     pub fn change_node_desc(&mut self, id: &automerge::ObjId, desc: String) -> error::Result<()> {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_DESC, desc)?;
@@ -210,6 +214,12 @@ impl Tree {
         Ok(())
     }
 
+    pub fn change_node_desc_cache(&mut self, id: &automerge::ObjId, desc: String) {
+        self.projection.update_node_desc(id, desc);
+    }
+}
+
+impl Tree {
     pub fn change_node_total(&mut self, id: &automerge::ObjId, total: u32) -> error::Result<()> {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_TASK_TOTAL, total)?;

@@ -4,6 +4,7 @@ use crate::appearance::ButtonsExt;
 
 pub struct Tasks {
     current_task: automerge::ObjId,
+    pub active_edit: Option<automerge::ObjId>,
 
     tree_state: tree::TreeState,
 }
@@ -12,6 +13,8 @@ impl Tasks {
     pub const fn new() -> Self {
         Self {
             current_task: automerge::ROOT,
+            active_edit: None,
+
             tree_state: tree::TreeState::new(),
         }
     }
@@ -27,6 +30,7 @@ impl super::View for Tasks {
 
         Self::parent_task(self, core, ui);
 
+        // TODO: Move them away from main
         egui::Panel::bottom("add_button_container")
             .frame(egui::Frame::default())
             .show_inside(ui, |ui| {
@@ -59,7 +63,6 @@ impl Tasks {
         ui: &mut egui::Ui,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let progress = core.tree.get_progress(&self.current_task)?;
-        println!("progress: {progress} -> {}", progress.procentage() / 100.0);
 
         egui::Panel::top("tasks_top_bar")
             .frame(egui::Frame::default())
@@ -83,75 +86,93 @@ impl Tasks {
 
     #[inline]
     fn parent_task(&mut self, core: &mut application::Core, ui: &mut egui::Ui) {
-        if let Ok(mut node) = core.tree.get_node(&self.current_task) {
-            egui::Panel::top("panel_parent_task")
-                .frame(egui::Frame::default())
-                .show_inside(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        egui::Frame::default()
-                            .outer_margin(egui::Margin::same(4))
-                            .show(ui, |ui| {
-                                if ui
-                                    .icon_button(
-                                        crate::appearance::PARENT_BUTTON_V2.into(),
-                                        crate::icons::left(),
-                                        egui::Color32::WHITE,
-                                    )
-                                    .clicked()
-                                {
-                                    if let Ok((id, _)) = core.tree.get_parent(&self.current_task) {
-                                        self.current_task = id;
-                                    } else {
-                                        self.current_task = automerge::ObjId::Root;
-                                    }
-                                }
-                            });
+        if let Ok(node) = core.tree.get_node(&self.current_task) {
+            let name_id = ui.make_persistent_id(("node_name_edit", &self.current_task));
+            let desc_id = ui.make_persistent_id(("node_desc_edit", &self.current_task));
 
-                        // TODO: Make these updates take place immediately in the Projection but
-                        // apply them to automerge only on focus loss
-                        egui::Frame::default()
-                            .outer_margin(egui::Margin::symmetric(2, 6))
-                            .show(ui, |ui| {
-                                ui.vertical(|ui| {
-                                    // TODO: Change that to write to projection on .changed() and to
-                                    // automerge on .focus_lost()
-                                    let name_edit = ui.add(
-                                        egui::TextEdit::singleline(&mut node.name)
-                                            .font(egui::TextStyle::Heading)
-                                            .frame(egui::Frame::default())
-                                            .hint_text("task name")
-                                            .desired_width(ui.available_width()),
-                                    );
+            let mut display_name =
+                ui.data_mut(|d| d.get_temp::<String>(name_id).unwrap_or_else(|| node.name));
 
-                                    if name_edit.changed()
-                                        && let Err(err) = core
-                                            .tree
-                                            .change_node_name(&self.current_task, node.name)
-                                    {
-                                        eprintln!("FAILED: To commit name {err:?}");
-                                    }
+            let mut display_desc =
+                ui.data_mut(|d| d.get_temp::<String>(desc_id).unwrap_or_else(|| node.desc));
 
-                                    // TODO: Change that to write to projection on .changed() and to
-                                    // automerge on .focus_lost()
-                                    let desc_edit = ui.add(
-                                        egui::TextEdit::multiline(&mut node.desc)
-                                            .font(egui::TextStyle::Body)
-                                            .frame(egui::Frame::default())
-                                            .hint_text("task description")
-                                            .desired_rows(1)
-                                            .desired_width(ui.available_width()),
-                                    );
-                                    if desc_edit.changed()
-                                        && let Err(err) = core
-                                            .tree
-                                            .change_node_desc(&self.current_task, node.desc)
-                                    {
-                                        eprintln!("FAILED: To commit desc {err:?}");
-                                    }
-                                });
-                            });
+            ui.horizontal(|ui| {
+                egui::Frame::default()
+                    .outer_margin(egui::Margin::same(4))
+                    .show(ui, |ui| {
+                        if ui
+                            .icon_button(
+                                crate::appearance::PARENT_BUTTON_V2.into(),
+                                crate::icons::left(),
+                                egui::Color32::WHITE,
+                            )
+                            .clicked()
+                        {
+                            if let Ok((id, _)) = core.tree.get_parent(&self.current_task) {
+                                self.current_task = id;
+                            } else {
+                                self.current_task = automerge::ObjId::Root;
+                            }
+                        }
                     });
-                });
+
+                egui::Frame::default()
+                    .outer_margin(egui::Margin::symmetric(2, 6))
+                    .show(ui, |ui| {
+                        ui.vertical(|ui| {
+                            let name_edit = ui.add(
+                                egui::TextEdit::singleline(&mut display_name)
+                                    .font(egui::TextStyle::Heading)
+                                    .frame(egui::Frame::default())
+                                    .hint_text("task name")
+                                    .desired_width(ui.available_width()),
+                            );
+
+                            if name_edit.changed() {
+                                core.tree.change_node_name_cache(
+                                    &self.current_task,
+                                    display_name.clone(),
+                                );
+                            }
+
+                            if name_edit.lost_focus() {
+                                if let Err(err) =
+                                    core.tree.change_node_name(&self.current_task, display_name)
+                                {
+                                    eprintln!("FAILED: To commit name {err:?}");
+                                }
+
+                                ui.data_mut(|d| d.remove::<String>(name_id));
+                            }
+
+                            let desc_edit = ui.add(
+                                egui::TextEdit::multiline(&mut display_desc)
+                                    .font(egui::TextStyle::Body)
+                                    .frame(egui::Frame::default())
+                                    .hint_text("task description")
+                                    .desired_rows(1)
+                                    .desired_width(ui.available_width()),
+                            );
+
+                            if desc_edit.changed() {
+                                ui.data_mut(|d| d.insert_temp(desc_id, display_desc.clone()));
+                                core.tree.change_node_desc_cache(
+                                    &self.current_task,
+                                    display_desc.clone(),
+                                );
+                            }
+
+                            if desc_edit.lost_focus() {
+                                if let Err(err) =
+                                    core.tree.change_node_desc(&self.current_task, display_desc)
+                                {
+                                    eprintln!("FAILED: To commit desc {err:?}");
+                                }
+                                ui.data_mut(|d| d.remove::<String>(desc_id));
+                            }
+                        });
+                    });
+            });
         }
     }
 
@@ -255,7 +276,7 @@ impl Tasks {
 
                                         ui.add_space(6.0);
 
-                                        Self::child_label(ui, child_id, core, child_data);
+                                        Self::child_label(ui, child_id, core, &child_data);
                                     },
                                 );
                             });
@@ -304,23 +325,34 @@ impl Tasks {
         ui: &mut egui::Ui,
         id: &automerge::ObjId,
         core: &mut application::Core,
-        mut node: application::tree::Node,
+        node: &application::tree::Node,
     ) {
+        let name_id = ui.make_persistent_id(("node_edit_name", id));
+
+        let mut display_name = ui.data_mut(|d| {
+            d.get_temp::<String>(name_id)
+                .unwrap_or_else(|| node.name.clone())
+        });
+
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-            // TODO: Change that to write to projection on .changed() and to
-            // automerge on .focus_lost()
             let name_edit = ui.add(
-                egui::TextEdit::singleline(&mut node.name)
+                egui::TextEdit::singleline(&mut display_name)
                     .font(egui::TextStyle::Button)
                     .frame(egui::Frame::default())
                     .hint_text("task name")
                     .clip_text(true)
                     .desired_width(ui.available_width()),
             );
-            if name_edit.changed()
-                && let Err(err) = core.tree.change_node_name(id, node.name)
-            {
-                eprintln!("FAILED: To commit child name {err:?}");
+
+            if name_edit.changed() {
+                core.tree.change_node_name_cache(id, display_name.clone());
+            }
+
+            if name_edit.lost_focus() {
+                if let Err(err) = core.tree.change_node_name(id, display_name) {
+                    eprintln!("FAILED: To commit child name {err:?}");
+                }
+                ui.data_mut(|d| d.remove::<String>(name_id));
             }
         });
     }

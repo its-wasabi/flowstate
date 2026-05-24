@@ -1,5 +1,6 @@
 use automerge::ReadDoc;
 use rustc_hash::{FxHashMap, FxHashSet};
+use serde_json::de;
 
 #[derive(Debug)]
 pub struct Projection {
@@ -31,17 +32,17 @@ impl Projection {
         self.children.clear();
         self.root_progress = super::node::Progress::default();
     }
+}
 
-    pub(super) fn rebuild(&mut self, document: &automerge::Automerge) -> super::error::Result<()> {
+impl Projection {
+    fn rebuild(&mut self, document: &automerge::Automerge) -> super::error::Result<()> {
         self.clear();
         self.build_recursive(document, &automerge::ObjId::Root)?;
         self.changes = document.get_heads();
 
         Ok(())
     }
-}
 
-impl Projection {
     fn build_recursive(
         &mut self,
         document: &automerge::Automerge,
@@ -76,7 +77,23 @@ impl Projection {
 
         Ok(progress)
     }
+}
 
+impl Projection {
+    pub(super) fn update_node_name(&mut self, id: &automerge::ObjId, name: String) {
+        if let Some(node) = self.nodes.get_mut(id) {
+            node.name = name;
+        }
+    }
+
+    pub(super) fn update_node_desc(&mut self, id: &automerge::ObjId, desc: String) {
+        if let Some(node) = self.nodes.get_mut(id) {
+            node.desc = desc;
+        }
+    }
+}
+
+impl Projection {
     pub(super) fn update_node(
         &mut self,
         id: automerge::ObjId,

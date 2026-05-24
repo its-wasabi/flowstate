@@ -98,6 +98,16 @@ impl eframe::App for App {
         //     FIX: When zooming instead of clamping it creates flickering
         //     ctx.set_zoom_factor(current_zoom.clamp(min_zoom, max_zoom));
         // }
+
+        // if ctx.input(|i| i.viewport().close_requested()) {
+        //     if let Some(persistent_id_name) = self.tasks.active_edit.take() {
+        //         let name = ctx.data_mut(|d| {
+        //             if let Some(x) = d.get_temp::<String>(persistent_id_name) {
+        //             };
+        //         })
+        //         let _ = self.core.tree.change_node_name(&id, buffer);
+        //     }
+        // }
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
