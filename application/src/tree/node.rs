@@ -64,6 +64,16 @@ pub struct Node {
     pub progress: Progress,
 }
 
+impl Default for Node {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            desc: String::new(),
+            progress: Progress::new(0, 10),
+        }
+    }
+}
+
 impl Node {
     pub(super) fn apply_data(
         &self,

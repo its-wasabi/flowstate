@@ -25,14 +25,14 @@ impl super::View for Tasks {
         Self::top_bar(self, core, ui)?;
         Self::parent_task(self, core, ui);
 
-        egui::Panel::bottom("panel_add_button")
+        egui::Panel::bottom("add_button_container")
             .frame(egui::Frame::default())
             .show_inside(ui, |ui| {
                 Self::add_button(self, ui, core);
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::default().fill(crate::theme::BG))
+            .frame(egui::Frame::default())
             .show_inside(ui, |ui| Self::children(self, ui, core))
             .inner?;
 
@@ -59,18 +59,18 @@ impl Tasks {
         let progress = core.tree.get_progress(&self.current_task)?;
 
         egui::Panel::top("tasks_top_bar")
-            .frame(egui::Frame::default().fill(crate::theme::BG))
-            .exact_size(crate::theme::TOP_BAR_HEIGHT)
+            .frame(egui::Frame::default())
+            .min_size(crate::appearance::TOP_BAR_HEIGHT)
             .show_inside(ui, |ui| {
                 ui.add(
                     egui::ProgressBar::new(progress.procentage() / 100.0)
                         .corner_radius(0)
-                        .fill(crate::theme::FG)
+                        .fill(crate::appearance::FG)
                         .desired_height(ui.available_height())
                         .desired_width(ui.available_width())
                         .text(
                             egui::RichText::new(format!(" {progress}%"))
-                                .color(crate::theme::BORDER),
+                                .color(crate::appearance::BORDER),
                         ),
                 );
             });
@@ -82,7 +82,7 @@ impl Tasks {
     fn parent_task(&mut self, core: &application::Core, ui: &mut egui::Ui) {
         if let Ok(node) = core.tree.get_node(&self.current_task) {
             egui::Panel::top("panel_parent_task")
-                .frame(egui::Frame::default().fill(crate::theme::BG))
+                .frame(egui::Frame::default())
                 .show_inside(ui, |ui| {
                     ui.horizontal(|ui| {
                         egui::Frame::default()
@@ -90,7 +90,7 @@ impl Tasks {
                             .show(ui, |ui| {
                                 if ui
                                     .add_sized(
-                                        crate::theme::PARENT_BUTTON_V2,
+                                        crate::appearance::PARENT_BUTTON_V2,
                                         egui::Button::image(crate::icons::left()),
                                     )
                                     .clicked()
@@ -118,25 +118,17 @@ impl Tasks {
 
     #[inline]
     fn add_button(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        egui::Panel::bottom("panel_bottom_add_button")
-            .frame(egui::Frame::default().fill(crate::theme::BG))
-            .show_inside(ui, |ui| {
-                let button_size = egui::vec2(ui.available_width(), crate::theme::CHILD_BUTTON);
-                let add_btn = egui::Button::image(crate::icons::add())
-                    .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT));
-                if ui.add_sized(button_size, add_btn).clicked()
-                    && let Ok(new_node) = core.tree.append_child(
-                        &self.current_task,
-                        application::tree::node::Node {
-                            name: String::new(),
-                            desc: String::new(),
-                            progress: application::tree::node::Progress::new(0, 10),
-                        },
-                    )
-                {
-                    self.current_task = new_node;
-                }
-            });
+        let button_size = egui::vec2(ui.available_width(), crate::appearance::CHILD_BUTTON);
+        let button = egui::Button::image(crate::icons::add())
+            .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT));
+
+        if ui.add_sized(button_size, button).clicked()
+            && let Ok(new_node) = core
+                .tree
+                .append_child(&self.current_task, application::tree::node::Node::default())
+        {
+            self.current_task = new_node;
+        }
     }
 
     #[inline]
@@ -145,21 +137,32 @@ impl Tasks {
         ui: &mut egui::Ui,
         core: &mut application::Core,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        egui::ScrollArea::vertical()
-            .content_margin(egui::Margin::symmetric(0, 0))
-            .show(ui, |ui| -> Result<(), Box<dyn std::error::Error>> {
-                if let Ok(children) = core.tree.get_children(&self.current_task) {
-                    if children.is_empty() {
-                        ui.centered_and_justified(|ui| ui.heading("TODO: Control panel"));
-                    } else {
-                        for (child_id, child_data) in children {
-                            Self::child(self, ui, core, &child_id, &child_data)?;
-                        }
+        let children = core.tree.get_children(&self.current_task)?;
+        if children.is_empty() {
+            Self::leaf_control_panel(ui, core)
+        } else {
+            egui::ScrollArea::vertical()
+                .content_margin(egui::Margin::symmetric(0, 0))
+                .show(ui, |ui| -> Result<(), Box<dyn std::error::Error>> {
+                    for (child_id, child_data) in children {
+                        Self::child(self, ui, core, &child_id, &child_data)?;
                     }
-                }
-                Ok(())
-            })
-            .inner
+
+                    Ok(())
+                })
+                .inner
+        }
+    }
+
+    #[inline]
+    // TODO: Remove
+    #[allow(unused, clippy::unnecessary_wraps)]
+    fn leaf_control_panel(
+        ui: &mut egui::Ui,
+        core: &application::Core,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        ui.centered_and_justified(|ui| ui.heading("empty (todo)"));
+        Ok(())
     }
 
     fn child(
@@ -245,13 +248,13 @@ impl Tasks {
         ui.add(
             egui::ProgressBar::new(child_data.progress.procentage() / 100.0)
                 .corner_radius(0)
-                .fill(crate::theme::FG)
+                .fill(crate::appearance::FG)
                 .desired_height(17.0)
                 .desired_width(ui.available_width())
                 .text(
                     egui::RichText::new(format!(" {}%", child_data.progress))
                         .size(10.0)
-                        .color(crate::theme::BORDER)
+                        .color(crate::appearance::BORDER)
                         .strong(),
                 ),
         );
@@ -276,7 +279,7 @@ impl Tasks {
     ) -> Result<(), Box<dyn std::error::Error>> {
         if ui
             .add_sized(
-                crate::theme::CHILD_BUTTON_V2,
+                crate::appearance::CHILD_BUTTON_V2,
                 egui::Button::image(crate::icons::right()).corner_radius(0),
             )
             .clicked()
@@ -294,7 +297,7 @@ impl Tasks {
 
         if ui
             .add_sized(
-                crate::theme::CHILD_BUTTON_V2,
+                crate::appearance::CHILD_BUTTON_V2,
                 egui::Button::image(panel_icon).corner_radius(0),
             )
             .clicked()
@@ -306,7 +309,7 @@ impl Tasks {
 
         if ui
             .add_sized(
-                crate::theme::CHILD_BUTTON_V2,
+                crate::appearance::CHILD_BUTTON_V2,
                 egui::Button::image(crate::icons::delete()).corner_radius(0),
             )
             .clicked()
@@ -320,7 +323,7 @@ impl Tasks {
 
             if ui
                 .add_sized(
-                    crate::theme::CHILD_BUTTON_V2,
+                    crate::appearance::CHILD_BUTTON_V2,
                     egui::Button::image(crate::icons::plus()).corner_radius(0),
                 )
                 .clicked()
@@ -331,7 +334,7 @@ impl Tasks {
 
             if ui
                 .add_sized(
-                    crate::theme::CHILD_BUTTON_V2,
+                    crate::appearance::CHILD_BUTTON_V2,
                     egui::Button::image(crate::icons::minus()).corner_radius(0),
                 )
                 .clicked()
