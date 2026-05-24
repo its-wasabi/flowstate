@@ -79,8 +79,12 @@ impl Tasks {
     }
 
     #[inline]
-    fn parent_task(&mut self, core: &application::Core, ui: &mut egui::Ui) {
-        if let Ok(node) = core.tree.get_node(&self.current_task) {
+    fn parent_task(
+        &mut self,
+        core: &mut application::Core,
+        ui: &mut egui::Ui,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        if let Ok(mut node) = core.tree.get_node(&self.current_task) {
             egui::Panel::top("panel_parent_task")
                 .frame(egui::Frame::default())
                 .show_inside(ui, |ui| {
@@ -107,13 +111,43 @@ impl Tasks {
                             .outer_margin(egui::Margin::symmetric(2, 6))
                             .show(ui, |ui| {
                                 ui.vertical(|ui| {
-                                    ui.heading(node.name);
-                                    ui.label(node.desc);
+                                    let name_edit = ui.add(
+                                        egui::TextEdit::singleline(&mut node.name)
+                                            .font(egui::TextStyle::Heading)
+                                            .frame(egui::Frame::default())
+                                            .hint_text("task name")
+                                            .desired_width(ui.available_width()),
+                                    );
+
+                                    if name_edit.changed()
+                                        && let Err(err) = core
+                                            .tree
+                                            .change_node_name(&self.current_task, node.name)
+                                    {
+                                        eprintln!("FAILED: To commit name {err:?}");
+                                    }
+
+                                    let desc_edit = ui.add(
+                                        egui::TextEdit::multiline(&mut node.desc)
+                                            .font(egui::TextStyle::Body)
+                                            .frame(egui::Frame::default())
+                                            .hint_text("task description")
+                                            .desired_rows(1)
+                                            .desired_width(ui.available_width()),
+                                    );
+                                    if desc_edit.changed()
+                                        && let Err(err) = core
+                                            .tree
+                                            .change_node_desc(&self.current_task, node.desc)
+                                    {
+                                        eprintln!("FAILED: To commit desc {err:?}");
+                                    }
                                 });
                             });
                     });
                 });
         }
+        Ok(())
     }
 
     #[inline]
@@ -142,10 +176,10 @@ impl Tasks {
             Self::leaf_control_panel(ui, core)
         } else {
             egui::ScrollArea::vertical()
-                .content_margin(egui::Margin::symmetric(0, 0))
+                .content_margin(egui::Margin::symmetric(6, 2))
                 .show(ui, |ui| -> Result<(), Box<dyn std::error::Error>> {
                     for (child_id, child_data) in children {
-                        Self::child(self, ui, core, &child_id, &child_data)?;
+                        Self::child(self, ui, core, &child_id, child_data)?;
                     }
 
                     Ok(())
@@ -170,7 +204,7 @@ impl Tasks {
         ui: &mut egui::Ui,
         core: &mut application::Core,
         child_id: &automerge::ObjId,
-        child_data: &application::tree::Node,
+        child_data: application::tree::Node,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let collapsing_id = ui.make_persistent_id(("expand", child_id));
         let mut collapsing_state = egui::collapsing_header::CollapsingState::load_with_default_open(
@@ -182,13 +216,13 @@ impl Tasks {
         let mut result = Ok(());
 
         egui::Frame::default()
-            .outer_margin(egui::Margin::symmetric(6, 4))
+            .outer_margin(egui::Margin::symmetric(0, 4))
             .corner_radius(0)
             .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.vertical(|ui| {
-                    Self::child_progress(ui, child_data);
+                    Self::child_progress(ui, &child_data);
 
                     egui::Frame::default()
                         .inner_margin(egui::Margin {
@@ -214,7 +248,7 @@ impl Tasks {
 
                                         ui.add_space(6.0);
 
-                                        Self::child_label(ui, child_data);
+                                        Self::child_label(ui, child_id, core, child_data);
                                     },
                                 );
                             });
@@ -263,9 +297,25 @@ impl Tasks {
     }
 
     #[inline]
-    fn child_label(ui: &mut egui::Ui, child_data: &application::tree::Node) {
+    fn child_label(
+        ui: &mut egui::Ui,
+        id: &automerge::ObjId,
+        core: &mut application::Core,
+        mut node: application::tree::Node,
+    ) {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-            ui.add(egui::Label::new(&child_data.name).truncate());
+            let name_edit = ui.add(
+                egui::TextEdit::singleline(&mut node.name)
+                    .font(egui::TextStyle::Body)
+                    .frame(egui::Frame::default())
+                    .hint_text("task name")
+                    .desired_width(ui.available_width()),
+            );
+            if name_edit.changed()
+                && let Err(err) = core.tree.change_node_name(id, node.name)
+            {
+                eprintln!("FAILED: To commit child name {err:?}");
+            }
         });
     }
 
@@ -280,7 +330,9 @@ impl Tasks {
         if ui
             .add_sized(
                 crate::appearance::CHILD_BUTTON_V2,
-                egui::Button::image(crate::icons::right()).corner_radius(0),
+                egui::Button::image(crate::icons::right())
+                    .image_tint_follows_text_color(true)
+                    .corner_radius(0),
             )
             .clicked()
         {
@@ -298,7 +350,9 @@ impl Tasks {
         if ui
             .add_sized(
                 crate::appearance::CHILD_BUTTON_V2,
-                egui::Button::image(panel_icon).corner_radius(0),
+                egui::Button::image(panel_icon)
+                    .image_tint_follows_text_color(true)
+                    .corner_radius(0),
             )
             .clicked()
         {
@@ -310,7 +364,10 @@ impl Tasks {
         if ui
             .add_sized(
                 crate::appearance::CHILD_BUTTON_V2,
-                egui::Button::image(crate::icons::delete()).corner_radius(0),
+                egui::Button::image(
+                    crate::icons::delete().tint(egui::Color32::from_rgb(255, 32, 34)),
+                )
+                .corner_radius(0),
             )
             .clicked()
             && let Err(err) = core.tree.remove(child_id)
@@ -327,7 +384,7 @@ impl Tasks {
                     egui::Button::image(crate::icons::plus()).corner_radius(0),
                 )
                 .clicked()
-                && let Err(err) = core.tree.change_progress_completed(child_id, 1)
+                && let Err(err) = core.tree.change_node_completed(child_id, 1)
             {
                 eprintln!("{err:?}");
             }
@@ -338,7 +395,7 @@ impl Tasks {
                     egui::Button::image(crate::icons::minus()).corner_radius(0),
                 )
                 .clicked()
-                && let Err(err) = core.tree.change_progress_completed(child_id, -1)
+                && let Err(err) = core.tree.change_node_completed(child_id, -1)
             {
                 eprintln!("{err:?}");
             }

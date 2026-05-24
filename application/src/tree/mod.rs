@@ -164,7 +164,9 @@ impl Tree {
 
         Ok(new_node_id)
     }
+}
 
+impl Tree {
     pub fn remove(&mut self, id: &automerge::ObjId) -> error::Result<()> {
         let mut parents = self.document.parents(id)?;
         let parent_list = parents.next().ok_or(error::TreeError::MissingProperty)?;
@@ -185,8 +187,40 @@ impl Tree {
 
         Ok(())
     }
+}
 
-    pub fn change_progress_completed(
+impl Tree {
+    pub fn change_node_name(&mut self, id: &automerge::ObjId, name: String) -> error::Result<()> {
+        let mut tx = self.document.transaction();
+        tx.put(id, NODE_NAME, name)?;
+        tx.commit();
+
+        self.projection.update_node(id.clone(), &self.document)?;
+
+        Ok(())
+    }
+
+    pub fn change_node_desc(&mut self, id: &automerge::ObjId, desc: String) -> error::Result<()> {
+        let mut tx = self.document.transaction();
+        tx.put(id, NODE_DESC, desc)?;
+        tx.commit();
+
+        self.projection.update_node(id.clone(), &self.document)?;
+
+        Ok(())
+    }
+
+    pub fn change_node_total(&mut self, id: &automerge::ObjId, total: u32) -> error::Result<()> {
+        let mut tx = self.document.transaction();
+        tx.put(id, NODE_TASK_TOTAL, total)?;
+        tx.commit();
+
+        self.projection.update_node(id.clone(), &self.document)?;
+
+        Ok(())
+    }
+
+    pub fn change_node_completed(
         &mut self,
         id: &automerge::ObjId,
         delta: i64,

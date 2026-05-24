@@ -122,6 +122,16 @@ impl Projection {
         }
     }
 
+    pub(super) fn update_node(
+        &mut self,
+        id: automerge::ObjId,
+        document: &automerge::Automerge,
+    ) -> super::error::Result<()> {
+        let node = super::node::Node::from_doc(document, &id)?;
+        self.nodes.entry(id).insert_entry(node);
+        Ok(())
+    }
+
     pub(super) fn update_up_from(
         &mut self,
         mut id: automerge::ObjId,

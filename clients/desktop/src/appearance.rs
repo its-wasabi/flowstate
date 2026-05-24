@@ -1,4 +1,3 @@
-use eframe::wgpu::naga::BOOL_WIDTH;
 use egui::{
     Color32, Stroke, Visuals,
     style::{Selection, WidgetVisuals, Widgets},
@@ -21,7 +20,7 @@ pub const ASIDE_BG: Color32 = Color32::from_rgba_premultiplied(20, 20, 20, 160);
 
 pub const BORDER: Color32 = Color32::from_gray(100);
 
-pub const ACTIVE: Color32 = Color32::from_gray(100);
+pub const ACTIVE: Color32 = Color32::from_gray(255);
 pub const BUTTON_ACTIVE_FG: Color32 = Color32::BLACK;
 pub const HOVER: Color32 = Color32::from_gray(80);
 
@@ -37,14 +36,16 @@ pub fn apply(cc: &eframe::CreationContext) {
         stroke: Stroke::new(1.0, FG),
     };
 
-    let flat = |bg: Color32, text: Color32, border: Color32| WidgetVisuals {
-        bg_fill: bg,
-        weak_bg_fill: bg,
-        bg_stroke: Stroke::new(BOOL_WIDTH, border),
-        fg_stroke: Stroke::new(1.0, text),
-        corner_radius: egui::CornerRadius::ZERO,
-        expansion: 0.0,
-    };
+    // Separated bg_fill (scrollbars/sliders) from weak_bg_fill (buttons)
+    let flat =
+        |bg_fill: Color32, weak_bg_fill: Color32, text: Color32, border: Color32| WidgetVisuals {
+            bg_fill,
+            weak_bg_fill,
+            bg_stroke: Stroke::new(BORDER_WIDTH, border), // Fixed: replaced BOOL_WIDTH with BORDER_WIDTH
+            fg_stroke: Stroke::new(1.0, text),
+            corner_radius: egui::CornerRadius::ZERO,
+            expansion: 0.0,
+        };
 
     v.widgets = Widgets {
         noninteractive: WidgetVisuals {
@@ -55,10 +56,11 @@ pub fn apply(cc: &eframe::CreationContext) {
             corner_radius: egui::CornerRadius::ZERO,
             expansion: 0.0,
         },
-        inactive: flat(BG, FG, BORDER),
-        hovered: flat(HOVER, FG, BORDER),
-        active: flat(ACTIVE, FG, ACTIVE),
-        open: flat(ACTIVE, BUTTON_ACTIVE_FG, ACTIVE),
+        // Arguments format: flat(bg_fill, weak_bg_fill, text_color, border_color)
+        inactive: flat(Color32::from_gray(140), BG, FG, BORDER), // Scrollbar is gray, button is black
+        hovered: flat(Color32::from_gray(180), HOVER, FG, BORDER), // Scrollbar gets brighter, button is dark gray
+        active: flat(ACTIVE, ACTIVE, BUTTON_ACTIVE_FG, ACTIVE), // Both turn white, but button text turns black
+        open: flat(ACTIVE, ACTIVE, BUTTON_ACTIVE_FG, ACTIVE),
     };
 
     cc.egui_ctx.set_visuals(v);
@@ -72,6 +74,11 @@ pub fn apply(cc: &eframe::CreationContext) {
         menu_margin: egui::Margin::ZERO,
         interact_size: egui::vec2(0.0, 0.0),
         indent: 0.0,
+        // Force scrollbars to use bg_fill configurations instead of matching text strokes
+        scroll: egui::style::ScrollStyle {
+            foreground_color: false,
+            ..style.spacing.scroll
+        },
         ..style.spacing
     };
 
