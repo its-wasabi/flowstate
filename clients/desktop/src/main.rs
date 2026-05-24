@@ -1,3 +1,5 @@
+use crate::appearance::ButtonsExt;
+
 mod appearance;
 mod config;
 mod icons;
@@ -54,6 +56,9 @@ impl App {
     }
 
     fn nav(&mut self, ui: &mut egui::Ui) {
+        ui.spacing_mut().item_spacing = egui::Vec2::ZERO;
+        ui.spacing_mut().button_padding = egui::Vec2::ZERO;
+
         let selection = &mut ui.visuals_mut().selection;
         selection.bg_fill = egui::Color32::WHITE;
         selection.stroke = egui::Stroke::new(1.0, egui::Color32::BLACK);
@@ -67,11 +72,15 @@ impl App {
                     ("CONFIG", Tab::Config),
                 ] {
                     strip.cell(|ui| {
-                        let button = egui::Button::selectable(self.current_tab == target, label)
-                            .corner_radius(0)
-                            .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT));
-
-                        if ui.add_sized(ui.available_size(), button).clicked() {
+                        if ui
+                            .selectable_button_borderless(
+                                ui.available_size(),
+                                egui::Color32::WHITE,
+                                self.current_tab == target,
+                                label,
+                            )
+                            .clicked()
+                        {
                             self.current_tab = target;
                         }
                     });
@@ -82,13 +91,13 @@ impl App {
 
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let current_zoom = ctx.zoom_factor();
-        let min_zoom = 0.8;
-        let max_zoom = 2.0;
-        if current_zoom < min_zoom || current_zoom > max_zoom {
-            // FIX: When zooming instead of clamping it creates flickering
-            // ctx.set_zoom_factor(current_zoom.clamp(min_zoom, max_zoom));
-        }
+        // let current_zoom = ctx.zoom_factor();
+        // let min_zoom = 0.8;
+        // let max_zoom = 2.0;
+        // if current_zoom < min_zoom || current_zoom > max_zoom {
+        //     FIX: When zooming instead of clamping it creates flickering
+        //     ctx.set_zoom_factor(current_zoom.clamp(min_zoom, max_zoom));
+        // }
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
@@ -108,7 +117,7 @@ impl eframe::App for App {
                 egui::ScrollArea::vertical()
                     .content_margin(egui::Margin::ZERO)
                     .max_width(f32::INFINITY)
-                    // TODO: Implement the visible rows
+                    .auto_shrink([false, false])
                     .show(ui, |ui| {
                         ui.set_width(ui.available_width());
 

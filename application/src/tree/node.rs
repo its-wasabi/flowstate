@@ -1,6 +1,6 @@
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Progress {
-    total: u32,
+    pub total: u32,
     completed: u32,
 }
 

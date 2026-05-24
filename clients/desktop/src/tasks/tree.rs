@@ -40,12 +40,12 @@ impl TreeState {
         let collapse_id = ui.make_persistent_id(id);
         let mut is_open = ui.data(|d| d.get_temp::<bool>(collapse_id).unwrap_or(false));
 
-        // 1. Allocate absolute edge-to-edge bounding rect
         let row_height = 24.0;
-        let row_rect = egui::Rect::from_min_max(
-            egui::pos2(ui.max_rect().left(), ui.cursor().top()),
-            egui::pos2(ui.max_rect().right(), ui.cursor().top() + row_height),
-        );
+
+        // FIX: Calculate row position directly from the current layout cursor bounds
+        let row_width = ui.available_width();
+        let row_rect =
+            egui::Rect::from_min_size(ui.cursor().left_top(), egui::vec2(row_width, row_height));
 
         let response = ui.allocate_rect(row_rect, egui::Sense::click());
         let mut arrow_center_x = None;
@@ -89,8 +89,6 @@ impl TreeState {
                 );
             }
 
-            // 3. Keep text padding uniform and stable
-            // Fix: Declare text_pos FIRST, then paint the text exactly ONCE
             let text_pos = egui::pos2(arrow_rect.right() + 4.0, row_rect.center().y);
             ui.painter().text(
                 text_pos,
@@ -120,7 +118,6 @@ impl TreeState {
             }
         }
 
-        // 4. Render children subtrees
         if has_children && is_open {
             let start_y = row_rect.bottom();
 

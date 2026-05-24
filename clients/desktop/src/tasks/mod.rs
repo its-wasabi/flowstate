@@ -1,9 +1,10 @@
-// TODO: If element has no child instead of displaying empty scroll area make some coll control
-// central element for that node without needing to expanding panel for more advanced things
 mod tree;
+
+use crate::appearance::ButtonsExt;
 
 pub struct Tasks {
     current_task: automerge::ObjId,
+
     tree_state: tree::TreeState,
 }
 
@@ -79,11 +80,7 @@ impl Tasks {
     }
 
     #[inline]
-    fn parent_task(
-        &mut self,
-        core: &mut application::Core,
-        ui: &mut egui::Ui,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn parent_task(&mut self, core: &mut application::Core, ui: &mut egui::Ui) {
         if let Ok(mut node) = core.tree.get_node(&self.current_task) {
             egui::Panel::top("panel_parent_task")
                 .frame(egui::Frame::default())
@@ -93,20 +90,23 @@ impl Tasks {
                             .outer_margin(egui::Margin::same(4))
                             .show(ui, |ui| {
                                 if ui
-                                    .add_sized(
-                                        crate::appearance::PARENT_BUTTON_V2,
-                                        egui::Button::image(crate::icons::left()),
+                                    .icon_button(
+                                        crate::appearance::PARENT_BUTTON_V2.into(),
+                                        crate::icons::left(),
+                                        egui::Color32::WHITE,
                                     )
                                     .clicked()
                                 {
                                     if let Ok((id, _)) = core.tree.get_parent(&self.current_task) {
                                         self.current_task = id;
                                     } else {
-                                        self.current_task = automerge::ROOT;
+                                        self.current_task = automerge::ObjId::Root;
                                     }
                                 }
                             });
 
+                        // TODO: Make these updates take place immediately in the Projection but
+                        // apply them to automerge only on focus loss
                         egui::Frame::default()
                             .outer_margin(egui::Margin::symmetric(2, 6))
                             .show(ui, |ui| {
@@ -147,16 +147,14 @@ impl Tasks {
                     });
                 });
         }
-        Ok(())
     }
 
     #[inline]
     fn add_button(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
         let button_size = egui::vec2(ui.available_width(), crate::appearance::CHILD_BUTTON);
-        let button = egui::Button::image(crate::icons::add())
-            .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT));
-
-        if ui.add_sized(button_size, button).clicked()
+        if ui
+            .icon_button_borderless(button_size, crate::icons::add(), egui::Color32::WHITE)
+            .clicked()
             && let Ok(new_node) = core
                 .tree
                 .append_child(&self.current_task, application::tree::node::Node::default())
@@ -179,7 +177,11 @@ impl Tasks {
                 .content_margin(egui::Margin::symmetric(6, 2))
                 .show(ui, |ui| -> Result<(), Box<dyn std::error::Error>> {
                     for (child_id, child_data) in children {
-                        Self::child(self, ui, core, &child_id, child_data)?;
+                        ui.push_id(&child_id, |ui| {
+                            if let Err(err) = Self::child(self, ui, core, &child_id, child_data) {
+                                eprintln!("{err:?}");
+                            }
+                        });
                     }
 
                     Ok(())
@@ -220,7 +222,6 @@ impl Tasks {
             .corner_radius(0)
             .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
             .show(ui, |ui| {
-                ui.set_width(ui.available_width());
                 ui.vertical(|ui| {
                     Self::child_progress(ui, &child_data);
 
@@ -263,12 +264,8 @@ impl Tasks {
                                 bottom: 6,
                             })
                             .show(ui, |ui| {
-                                ui.set_width(ui.available_width());
-                                ui.small("DDescription or child sub-tasks metadata goes here...");
-                                ui.horizontal(|ui| {
-                                    ui.label(egui::RichText::new("ID:").weak());
-                                    ui.small(format!("{child_id:?}"));
-                                });
+                                ui.set_max_height(90.0);
+                                ui.centered_and_justified(|ui| ui.label("(todo)"))
                             });
                     });
                 });
@@ -283,11 +280,11 @@ impl Tasks {
             egui::ProgressBar::new(child_data.progress.procentage() / 100.0)
                 .corner_radius(0)
                 .fill(crate::appearance::FG)
-                .desired_height(17.0)
+                .desired_height(18.0)
                 .desired_width(ui.available_width())
                 .text(
                     egui::RichText::new(format!(" {}%", child_data.progress))
-                        .size(10.0)
+                        .size(13.0)
                         .color(crate::appearance::BORDER)
                         .strong(),
                 ),
@@ -304,11 +301,14 @@ impl Tasks {
         mut node: application::tree::Node,
     ) {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+            // TODO: Make these updates take place immediately in the Projection but
+            // apply them to automerge only on focus loss
             let name_edit = ui.add(
                 egui::TextEdit::singleline(&mut node.name)
-                    .font(egui::TextStyle::Body)
+                    .font(egui::TextStyle::Button)
                     .frame(egui::Frame::default())
                     .hint_text("task name")
+                    .clip_text(true)
                     .desired_width(ui.available_width()),
             );
             if name_edit.changed()
@@ -328,11 +328,10 @@ impl Tasks {
         collapsing_state: &mut egui::collapsing_header::CollapsingState,
     ) -> Result<(), Box<dyn std::error::Error>> {
         if ui
-            .add_sized(
-                crate::appearance::CHILD_BUTTON_V2,
-                egui::Button::image(crate::icons::right())
-                    .image_tint_follows_text_color(true)
-                    .corner_radius(0),
+            .icon_button(
+                crate::appearance::CHILD_BUTTON_V2.into(),
+                crate::icons::right(),
+                egui::Color32::WHITE,
             )
             .clicked()
         {
@@ -348,11 +347,10 @@ impl Tasks {
         };
 
         if ui
-            .add_sized(
-                crate::appearance::CHILD_BUTTON_V2,
-                egui::Button::image(panel_icon)
-                    .image_tint_follows_text_color(true)
-                    .corner_radius(0),
+            .icon_button(
+                crate::appearance::CHILD_BUTTON_V2.into(),
+                panel_icon,
+                egui::Color32::WHITE,
             )
             .clicked()
         {
@@ -362,12 +360,10 @@ impl Tasks {
         ui.add_space(6.0);
 
         if ui
-            .add_sized(
-                crate::appearance::CHILD_BUTTON_V2,
-                egui::Button::image(
-                    crate::icons::delete().tint(egui::Color32::from_rgb(255, 32, 34)),
-                )
-                .corner_radius(0),
+            .icon_button(
+                crate::appearance::CHILD_BUTTON_V2.into(),
+                crate::icons::delete(),
+                egui::Color32::RED,
             )
             .clicked()
             && let Err(err) = core.tree.remove(child_id)
@@ -379,9 +375,10 @@ impl Tasks {
             ui.add_space(8.0);
 
             if ui
-                .add_sized(
-                    crate::appearance::CHILD_BUTTON_V2,
-                    egui::Button::image(crate::icons::plus()).corner_radius(0),
+                .icon_button(
+                    crate::appearance::CHILD_BUTTON_V2.into(),
+                    crate::icons::plus(),
+                    egui::Color32::GREEN,
                 )
                 .clicked()
                 && let Err(err) = core.tree.change_node_completed(child_id, 1)
@@ -390,9 +387,10 @@ impl Tasks {
             }
 
             if ui
-                .add_sized(
-                    crate::appearance::CHILD_BUTTON_V2,
-                    egui::Button::image(crate::icons::minus()).corner_radius(0),
+                .icon_button(
+                    crate::appearance::CHILD_BUTTON_V2.into(),
+                    crate::icons::minus(),
+                    egui::Color32::YELLOW,
                 )
                 .clicked()
                 && let Err(err) = core.tree.change_node_completed(child_id, -1)

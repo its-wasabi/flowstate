@@ -21,7 +21,6 @@ pub const ASIDE_BG: Color32 = Color32::from_rgba_premultiplied(20, 20, 20, 160);
 pub const BORDER: Color32 = Color32::from_gray(100);
 
 pub const ACTIVE: Color32 = Color32::from_gray(255);
-pub const BUTTON_ACTIVE_FG: Color32 = Color32::BLACK;
 pub const HOVER: Color32 = Color32::from_gray(80);
 
 pub fn apply(cc: &eframe::CreationContext) {
@@ -36,13 +35,12 @@ pub fn apply(cc: &eframe::CreationContext) {
         stroke: Stroke::new(1.0, FG),
     };
 
-    // Separated bg_fill (scrollbars/sliders) from weak_bg_fill (buttons)
     let flat =
-        |bg_fill: Color32, weak_bg_fill: Color32, text: Color32, border: Color32| WidgetVisuals {
+        |bg_fill: Color32, weak_bg_fill: Color32, fg: Color32, border: Color32| WidgetVisuals {
             bg_fill,
             weak_bg_fill,
-            bg_stroke: Stroke::new(BORDER_WIDTH, border), // Fixed: replaced BOOL_WIDTH with BORDER_WIDTH
-            fg_stroke: Stroke::new(1.0, text),
+            fg_stroke: Stroke::new(BORDER_WIDTH, fg),
+            bg_stroke: Stroke::new(BORDER_WIDTH, border),
             corner_radius: egui::CornerRadius::ZERO,
             expansion: 0.0,
         };
@@ -56,11 +54,10 @@ pub fn apply(cc: &eframe::CreationContext) {
             corner_radius: egui::CornerRadius::ZERO,
             expansion: 0.0,
         },
-        // Arguments format: flat(bg_fill, weak_bg_fill, text_color, border_color)
-        inactive: flat(Color32::from_gray(140), BG, FG, BORDER), // Scrollbar is gray, button is black
-        hovered: flat(Color32::from_gray(180), HOVER, FG, BORDER), // Scrollbar gets brighter, button is dark gray
-        active: flat(ACTIVE, ACTIVE, BUTTON_ACTIVE_FG, ACTIVE), // Both turn white, but button text turns black
-        open: flat(ACTIVE, ACTIVE, BUTTON_ACTIVE_FG, ACTIVE),
+        inactive: flat(Color32::from_gray(140), BG, FG, BORDER),
+        hovered: flat(Color32::from_gray(180), HOVER, FG, BORDER),
+        active: flat(ACTIVE, ACTIVE, ACTIVE, BORDER),
+        open: flat(ACTIVE, ACTIVE, ACTIVE, ACTIVE),
     };
 
     cc.egui_ctx.set_visuals(v);
@@ -72,7 +69,7 @@ pub fn apply(cc: &eframe::CreationContext) {
         window_margin: egui::Margin::ZERO,
         button_padding: egui::vec2(4.0, 4.0),
         menu_margin: egui::Margin::ZERO,
-        interact_size: egui::vec2(0.0, 0.0),
+        interact_size: egui::Vec2::new(BORDER_WIDTH, BORDER_WIDTH),
         indent: 0.0,
         // Force scrollbars to use bg_fill configurations instead of matching text strokes
         scroll: egui::style::ScrollStyle {
@@ -98,4 +95,122 @@ pub fn apply(cc: &eframe::CreationContext) {
     }
 
     cc.egui_ctx.set_fonts(fonts);
+}
+
+use egui::{Image, Response, Ui, Vec2};
+
+pub trait ButtonsExt {
+    fn selectable_button_borderless(
+        &mut self,
+        size: Vec2,
+        color: Color32,
+        selected: bool,
+        label: &str,
+    ) -> Response;
+
+    fn icon_button(&mut self, size: Vec2, image: Image<'static>, color: Color32) -> Response;
+
+    fn icon_button_borderless(
+        &mut self,
+        size: Vec2,
+        image: Image<'static>,
+        color: Color32,
+    ) -> Response;
+}
+
+impl ButtonsExt for Ui {
+    fn selectable_button_borderless(
+        &mut self,
+        size: Vec2,
+        color: Color32,
+        selected: bool,
+        label: &str,
+    ) -> Response {
+        self.scope(|ui| {
+            let hover_bg = color.gamma_multiply(0.32);
+            let active_bg = color.gamma_multiply(0.40);
+            let visuals = ui.visuals_mut();
+
+            visuals.widgets.inactive.bg_fill = Color32::TRANSPARENT;
+            visuals.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+            visuals.widgets.inactive.fg_stroke.color = color;
+
+            visuals.widgets.hovered.bg_fill = hover_bg;
+            visuals.widgets.hovered.weak_bg_fill = hover_bg;
+            visuals.widgets.hovered.fg_stroke.color = color;
+
+            visuals.widgets.active.bg_fill = active_bg;
+            visuals.widgets.active.weak_bg_fill = color;
+            visuals.widgets.active.fg_stroke.color = Color32::BLACK;
+            visuals.widgets.active.bg_stroke.color = color;
+
+            ui.add_sized(
+                size,
+                egui::Button::selectable(selected, label)
+                    .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT)),
+            )
+        })
+        .inner
+    }
+
+    fn icon_button(&mut self, size: Vec2, image: Image<'static>, color: Color32) -> Response {
+        self.scope(|ui| {
+            let hover_bg = color.gamma_multiply(0.32);
+            let active_bg = color.gamma_multiply(0.40);
+            let visuals = ui.visuals_mut();
+
+            visuals.widgets.inactive.bg_fill = Color32::TRANSPARENT;
+            visuals.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+            visuals.widgets.inactive.fg_stroke.color = color;
+
+            visuals.widgets.hovered.bg_fill = hover_bg;
+            visuals.widgets.hovered.weak_bg_fill = hover_bg;
+            visuals.widgets.hovered.fg_stroke.color = color;
+
+            visuals.widgets.active.bg_fill = active_bg;
+            visuals.widgets.active.weak_bg_fill = color;
+            visuals.widgets.active.fg_stroke.color = Color32::BLACK;
+            visuals.widgets.active.bg_stroke.color = color;
+
+            ui.add_sized(
+                size,
+                egui::Button::image(image).image_tint_follows_text_color(true),
+            )
+        })
+        .inner
+    }
+
+    fn icon_button_borderless(
+        &mut self,
+        size: Vec2,
+        image: Image<'static>,
+        color: Color32,
+    ) -> Response {
+        self.scope(|ui| {
+            let hover_bg = color.gamma_multiply(0.32);
+            let active_bg = color.gamma_multiply(0.40);
+            let visuals = ui.visuals_mut();
+
+            visuals.widgets.inactive.bg_fill = Color32::TRANSPARENT;
+            visuals.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+            visuals.widgets.inactive.fg_stroke.color = color;
+
+            visuals.widgets.hovered.bg_fill = hover_bg;
+            visuals.widgets.hovered.weak_bg_fill = hover_bg;
+            visuals.widgets.hovered.fg_stroke.color = color;
+
+            visuals.widgets.active.bg_fill = active_bg;
+            visuals.widgets.active.weak_bg_fill = color;
+            visuals.widgets.active.fg_stroke.color = Color32::BLACK;
+            visuals.widgets.active.bg_stroke.color = color;
+
+            ui.add_sized(
+                size,
+                egui::Button::image(image)
+                    .image_tint_follows_text_color(true)
+                    .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT)),
+            )
+        })
+        .inner
+    }
 }
