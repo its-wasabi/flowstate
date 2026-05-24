@@ -46,7 +46,7 @@ impl super::View for Stats {
         let max_quarter = ui.available_height() * 0.85;
 
         egui::Panel::top("top_panel_chart_tasks")
-            .frame(egui::Frame::default())
+            .frame(egui::Frame::default().fill(crate::theme::BG))
             .resizable(true)
             .default_size(center_split)
             .size_range(min_quarter..=max_quarter)
@@ -57,7 +57,7 @@ impl super::View for Stats {
             });
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::default())
+            .frame(egui::Frame::default().fill(crate::theme::BG))
             .show_inside(ui, |ui| {
                 ui.centered_and_justified(|ui| {
                     self.chart_effort.show_plot(ui);

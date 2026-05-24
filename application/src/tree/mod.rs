@@ -25,7 +25,7 @@ pub struct Tree {
     projection: projection::Projection,
 }
 
-impl crate::storage::FromBytes for Tree {
+impl crate::io::storage::FromBytes for Tree {
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         let document = automerge::Automerge::load(bytes)?;
         let cached_heads = document.get_heads();

@@ -122,7 +122,8 @@ impl Tasks {
             .frame(egui::Frame::default().fill(crate::theme::BG))
             .show_inside(ui, |ui| {
                 let button_size = egui::vec2(ui.available_width(), crate::theme::CHILD_BUTTON);
-                let add_btn = egui::Button::image(crate::icons::add());
+                let add_btn = egui::Button::image(crate::icons::add())
+                    .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT));
                 if ui.add_sized(button_size, add_btn).clicked()
                     && let Ok(new_node) = core.tree.append_child(
                         &self.current_task,

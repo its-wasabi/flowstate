@@ -11,8 +11,8 @@
 pub mod analytics;
 pub mod config;
 pub mod error;
+pub mod io;
 pub mod peer;
-pub mod storage;
 pub mod tree;
 
 pub const APP_NAME: &str = "flowstate";
@@ -24,7 +24,7 @@ const CONFIG_SAVE_PATH: &str = "config.json";
 #[derive(Debug)]
 pub struct Core {
     runtime: tokio::runtime::Runtime,
-    storage: storage::Storage,
+    storage: io::storage::Storage,
 
     pub config: config::Config,
     pub tree: tree::Tree,
@@ -35,12 +35,12 @@ pub struct Core {
 impl Core {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
         let runtime = tokio::runtime::Runtime::new()?;
-        let storage = storage::Storage::new(runtime.handle().clone())?;
+        let storage = io::storage::Storage::new(runtime.handle().clone())?;
 
         let config: config::Config =
-            storage.load_or_default(CONFIG_SAVE_PATH, storage::paths::StorageKind::Config)?;
+            storage.load_or_default(CONFIG_SAVE_PATH, io::storage::paths::StorageKind::Config)?;
         let mut tree: tree::Tree =
-            storage.load_or_default(DOCUMENT_SAVE_PATH, storage::paths::StorageKind::Data)?;
+            storage.load_or_default(DOCUMENT_SAVE_PATH, io::storage::paths::StorageKind::Data)?;
 
         let sync = if let Some(server_socket) = config.server_socket {
             Some(peer::Peer::new(&mut tree.document, server_socket)?)
@@ -62,13 +62,13 @@ impl Core {
     pub fn save(&mut self) -> serde_json::Result<()> {
         self.storage.save(
             DOCUMENT_SAVE_PATH,
-            storage::paths::StorageKind::Data,
+            io::storage::paths::StorageKind::Data,
             self.tree.document.save(),
         );
 
         self.storage.save(
             CONFIG_SAVE_PATH,
-            storage::paths::StorageKind::Config,
+            io::storage::paths::StorageKind::Config,
             self.config.as_bytes()?,
         );
 
