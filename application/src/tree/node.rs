@@ -126,9 +126,10 @@ impl Node {
         let (completed_val, _) = doc
             .get(id, super::NODE_TASK_COMPLETED)?
             .ok_or(super::error::TreeError::MissingProperty)?;
+
         let task_completed = match completed_val.into_scalar() {
-            Ok(v) => {
-                let i = v.to_i64().ok_or(super::error::TreeError::InvalidNodeType)?;
+            Ok(automerge::ScalarValue::Counter(c)) => {
+                let i = i64::try_from(c).unwrap_or(0);
                 u32::try_from(i).map_err(|_| super::error::TreeError::InvalidValue)?
             }
             _ => return Err(super::error::TreeError::InvalidNodeType),

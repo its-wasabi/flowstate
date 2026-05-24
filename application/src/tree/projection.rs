@@ -8,6 +8,7 @@ pub struct Projection {
 
     pub(super) root_progress: super::node::Progress,
     pub(super) nodes: HashMap<automerge::ObjId, super::node::Node>,
+    pub(super) parent: HashMap<automerge::ObjId, automerge::ObjId>,
     pub(super) children: HashMap<automerge::ObjId, Vec<automerge::ObjId>>,
 }
 
@@ -16,6 +17,7 @@ impl Projection {
         let mut projection = Self {
             changes: document.get_heads(),
             nodes: HashMap::new(),
+            parent: HashMap::new(),
             children: HashMap::new(),
             root_progress: super::node::Progress::default(),
         };
@@ -28,8 +30,39 @@ impl Projection {
 impl Projection {
     fn clear(&mut self) {
         self.nodes.clear();
+        self.parent.clear();
         self.children.clear();
         self.root_progress = super::node::Progress::default();
+    }
+}
+
+impl Projection {
+    fn calculate_progress(
+        &self,
+        document: &automerge::Automerge,
+        id: &automerge::ObjId,
+    ) -> super::node::Progress {
+        let child_ids = self.children.get(id).cloned().unwrap_or_default();
+
+        if child_ids.is_empty() {
+            if id == &automerge::ObjId::Root {
+                return super::node::Progress::default();
+            }
+            if let Ok(node) = super::node::Node::from_doc(document, id) {
+                return node.progress;
+            }
+            super::node::Progress::default()
+        } else {
+            let total = (child_ids.len() as u32) * 100;
+            let mut completed = 0;
+
+            for cid in &child_ids {
+                if let Some(child_node) = self.nodes.get(cid) {
+                    completed += child_node.progress.procentage() as u32;
+                }
+            }
+            super::node::Progress::new(completed, total)
+        }
     }
 }
 
@@ -47,7 +80,6 @@ impl Projection {
         document: &automerge::Automerge,
         id: &automerge::ObjId,
     ) -> super::error::Result<super::node::Progress> {
-        let mut root_progress = super::node::Progress::default();
         let mut child_ids = Vec::new();
 
         if let Ok(Some((_, list_id))) = document.get(id, super::CHILDREN) {
@@ -55,78 +87,94 @@ impl Projection {
             for idx in 0..list_len {
                 if let Ok(Some((_, child_id))) = document.get(&list_id, idx) {
                     child_ids.push(child_id.clone());
-                    root_progress += self.build_recursive(document, &child_id)?;
+                    self.parent.insert(child_id.clone(), id.clone());
+                    self.build_recursive(document, &child_id)?;
                 }
             }
         }
 
-        self.children.insert(id.clone(), child_ids.clone());
+        self.children.insert(id.clone(), child_ids);
+
+        let progress = self.calculate_progress(document, id);
 
         if id == &automerge::ObjId::Root {
-            self.root_progress = root_progress;
-            return Ok(root_progress);
+            self.root_progress = progress;
+            return Ok(progress);
         }
 
         if let Ok(mut node_data) = super::node::Node::from_doc(document, id) {
-            if child_ids.is_empty() {
-                root_progress = node_data.progress;
-            } else {
-                node_data.progress = root_progress;
-            }
+            node_data.progress = progress;
             self.nodes.insert(id.clone(), node_data);
         }
 
-        Ok(root_progress)
+        Ok(progress)
     }
 }
-impl Projection {
-    pub fn update_path(
-        &mut self,
-        document: &automerge::Automerge,
-        mut current_id: automerge::ObjId,
-    ) -> super::error::Result<()> {
-        loop {
-            let mut new_progress = super::node::Progress::default();
-            let child_ids = self.children.get(&current_id).cloned().unwrap_or_default();
 
-            if child_ids.is_empty() && current_id != automerge::ObjId::Root {
-                if let Ok(doc_node) = super::node::Node::from_doc(document, &current_id) {
-                    new_progress = doc_node.progress;
-                }
-            } else {
-                for cid in &child_ids {
-                    if let Some(child_node) = self.nodes.get(cid) {
-                        new_progress += child_node.progress;
-                    }
-                }
+impl Projection {
+    pub(super) fn purge_recursive(&mut self, id: &automerge::ObjId) {
+        self.nodes.remove(id);
+        self.parent.remove(id);
+        if let Some(child_ids) = self.children.remove(id) {
+            for child_id in child_ids {
+                self.purge_recursive(&child_id);
             }
+        }
+    }
+
+    pub(super) fn update_up_from(
+        &mut self,
+        mut id: automerge::ObjId,
+        parent_id: Option<automerge::ObjId>,
+        document: &automerge::Automerge,
+    ) {
+        if let Some(parent_id) = parent_id {
+            self.parent.insert(id.clone(), parent_id.clone());
+            self.children.entry(parent_id).or_default().push(id.clone());
+        }
+
+        let progress = self.calculate_progress(document, &id);
+
+        if id == automerge::ObjId::Root {
+            self.root_progress = progress;
+        } else if let Some(node) = self.nodes.get_mut(&id) {
+            node.progress = progress;
+        } else if let Ok(mut new_node) = super::node::Node::from_doc(document, &id) {
+            new_node.progress = progress;
+            self.nodes.insert(id.clone(), new_node);
+        }
+
+        let Some(mut current_id) = self.parent.get(&id).cloned() else {
+            return;
+        };
+
+        loop {
+            let branch_progress = self.calculate_progress(document, &current_id);
 
             if current_id == automerge::ObjId::Root {
-                self.root_progress = new_progress;
+                self.root_progress = branch_progress;
                 break;
             } else if let Some(node) = self.nodes.get_mut(&current_id) {
-                node.progress = new_progress;
+                node.progress = branch_progress;
             }
 
-            let mut parents = document.parents(&current_id)?;
-            if parents.next().is_some()
-                && let Some(map_parent) = parents.next()
-            {
-                current_id = map_parent.obj;
-                continue;
+            if let Some(next_parent_id) = self.parent.get(&current_id).cloned() {
+                current_id = next_parent_id;
+            } else {
+                break;
             }
-            break;
         }
 
         self.changes = document.get_heads();
-        Ok(())
     }
+}
 
+impl Projection {
     pub fn apply_patches(
         &mut self,
         document: &automerge::Automerge,
         patches: Vec<automerge::Patch>,
-    ) -> super::error::Result<()> {
+    ) {
         use automerge::patches::PatchAction;
 
         let mut paths_to_recompute = Vec::new();
@@ -151,11 +199,10 @@ impl Projection {
         paths_to_recompute.dedup();
 
         for id in paths_to_recompute {
-            self.update_path(document, id)?;
+            // Replace update_path with update_up_from
+            self.update_up_from(id, None, document);
         }
 
         self.changes = document.get_heads();
-
-        Ok(())
     }
 }

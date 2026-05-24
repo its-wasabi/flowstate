@@ -66,7 +66,7 @@ impl Tree {
         let current_heads = self.document.get_heads();
         if self.projection.changes != current_heads {
             let patches = self.document.diff(&self.projection.changes, &current_heads);
-            self.projection.apply_patches(&self.document, patches)?;
+            self.projection.apply_patches(&self.document, patches);
         }
 
         Ok(())
@@ -92,14 +92,6 @@ impl Tree {
             .ok_or(error::TreeError::MissingProperty)
     }
 
-    pub fn get_progress(&self, id: &automerge::ObjId) -> error::Result<node::Progress> {
-        if id == &automerge::ObjId::Root {
-            return Ok(self.projection.root_progress.clone());
-        }
-
-        self.get_node(id).map(|n| n.progress)
-    }
-
     pub fn get_children(
         &self,
         id: &automerge::ObjId,
@@ -120,7 +112,9 @@ impl Tree {
 
         Ok(result)
     }
+}
 
+impl Tree {
     pub fn get_parent(
         &self,
         id: &automerge::ObjId,
@@ -135,6 +129,14 @@ impl Tree {
 
         let data = self.get_node(&parent.obj)?;
         Ok((parent.obj, data))
+    }
+
+    pub fn get_progress(&self, id: &automerge::ObjId) -> error::Result<node::Progress> {
+        if id == &automerge::ObjId::Root {
+            return Ok(self.projection.root_progress);
+        }
+
+        self.get_node(id).map(|n| n.progress)
     }
 }
 
@@ -154,16 +156,11 @@ impl Tree {
         node.apply_data(&mut tx, &new_node_id)?;
         tx.commit();
 
-        self.projection.nodes.insert(new_node_id.clone(), node);
-        self.projection
-            .children
-            .insert(new_node_id.clone(), Vec::new());
-        if let Some(siblings) = self.projection.children.get_mut(parent_id) {
-            siblings.push(new_node_id.clone());
-        }
-
-        self.projection
-            .update_path(&self.document, parent_id.clone())?;
+        self.projection.update_up_from(
+            new_node_id.clone(),
+            Some(parent_id.clone()),
+            &self.document,
+        );
 
         Ok(new_node_id)
     }
@@ -174,33 +171,17 @@ impl Tree {
         let parent_node = parents.next().ok_or(error::TreeError::MissingRoot)?;
         let parent_id = parent_node.obj;
 
-        // Map out descendant cache removal
-        let mut to_remove = vec![id.clone()];
-        let mut idx = 0;
-        while idx < to_remove.len() {
-            let current = &to_remove[idx];
-            if let Some(children) = self.projection.children.get(current) {
-                to_remove.extend(children.iter().cloned());
-            }
-            idx += 1;
-        }
-
-        // Delete from Automerge
         let mut tx = self.document.transaction();
         tx.delete(&parent_list.obj, parent_list.prop)?;
         tx.commit();
 
-        // Delete from cache
-        for rm_id in to_remove {
-            self.projection.nodes.remove(&rm_id);
-            self.projection.children.remove(&rm_id);
-        }
         if let Some(siblings) = self.projection.children.get_mut(&parent_id) {
             siblings.retain(|cid| cid != id);
         }
 
-        // Recalculate progress upwards
-        self.projection.update_path(&self.document, parent_id)?;
+        self.projection.purge_recursive(id);
+        self.projection
+            .update_up_from(parent_id, None, &self.document);
 
         Ok(())
     }
@@ -246,7 +227,8 @@ impl Tree {
             tx.increment(id, NODE_TASK_COMPLETED, safe_delta)?;
             tx.commit();
 
-            self.projection.update_path(&self.document, id.clone())?;
+            self.projection
+                .update_up_from(id.clone(), None, &self.document);
         }
 
         Ok(())
