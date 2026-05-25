@@ -36,11 +36,7 @@ impl Stats {
 }
 
 impl super::View for Stats {
-    fn main(
-        &mut self,
-        ui: &mut egui::Ui,
-        _core: &mut application::Core,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn main(&mut self, ui: &mut egui::Ui, _core: &mut application::Core) {
         let center_split = ui.available_height() / 2.0;
         let min_quarter = ui.available_height() * 0.15;
         let max_quarter = ui.available_height() * 0.85;
@@ -63,19 +59,11 @@ impl super::View for Stats {
                     self.chart_effort.show_plot(ui);
                 });
             });
-
-        Ok(())
     }
 
-    fn aside(
-        &mut self,
-        ui: &mut egui::Ui,
-        _core: &mut application::Core,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn aside(&mut self, ui: &mut egui::Ui, _core: &mut application::Core) {
         ui.heading("FROM: [set here]");
         ui.heading("TO: [set here]");
         ui.label("TODO: Make it basically control panel for the graph content e.g.: some constraint toggles etc...");
-
-        Ok(())
     }
 }

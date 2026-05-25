@@ -7,11 +7,7 @@ impl Config {
 }
 
 impl super::View for Config {
-    fn main(
-        &mut self,
-        ui: &mut egui::Ui,
-        _core: &mut application::Core,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn main(&mut self, ui: &mut egui::Ui, _core: &mut application::Core) {
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.heading("System info");
             ui.label(format!(
@@ -28,19 +24,11 @@ impl super::View for Config {
                 super::UI_VERSION.2
             ));
         });
-
-        Ok(())
     }
 
-    fn aside(
-        &mut self,
-        ui: &mut egui::Ui,
-        _core: &mut application::Core,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn aside(&mut self, ui: &mut egui::Ui, _core: &mut application::Core) {
         ui.centered_and_justified(|ui| {
             ui.heading("empty");
         });
-
-        Ok(())
     }
 }

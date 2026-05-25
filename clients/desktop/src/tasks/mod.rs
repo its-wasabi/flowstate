@@ -24,26 +24,16 @@ impl Tasks {
 }
 
 impl super::View for Tasks {
-    fn main(
-        &mut self,
-        ui: &mut egui::Ui,
-        core: &mut application::Core,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn main(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
         Self::top_bar(self, core, ui);
-        Self::parent_task(self, core, ui);
         Self::add_button(self, ui, core);
-        Self::children(self, ui, core);
 
-        Ok(())
+        Self::parent_task(self, core, ui);
+        Self::children(self, ui, core);
     }
 
-    fn aside(
-        &mut self,
-        ui: &mut egui::Ui,
-        core: &mut application::Core,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    fn aside(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
         self.tree_state.show(ui, &core.tree, &mut self.current_task);
-        Ok(())
     }
 }
 

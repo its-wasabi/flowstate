@@ -26,21 +26,8 @@ pub enum Tab {
 }
 
 pub trait View {
-    /// # Errors
-    /// Depends on the internal implementation
-    fn main(
-        &mut self,
-        ui: &mut egui::Ui,
-        core: &mut application::Core,
-    ) -> Result<(), Box<dyn std::error::Error>>;
-
-    /// # Errors
-    /// Depends on the internal implementation
-    fn aside(
-        &mut self,
-        ui: &mut egui::Ui,
-        core: &mut application::Core,
-    ) -> Result<(), Box<dyn std::error::Error>>;
+    fn main(&mut self, ui: &mut egui::Ui, core: &mut application::Core);
+    fn aside(&mut self, ui: &mut egui::Ui, core: &mut application::Core);
 }
 
 impl App {
@@ -147,9 +134,9 @@ impl eframe::App for App {
                         ui.set_width(ui.available_width());
 
                         match self.current_tab {
-                            Tab::Tasks => self.tasks.aside(ui, &mut self.core).unwrap(),
-                            Tab::Stats => self.stats.aside(ui, &mut self.core).unwrap(),
-                            Tab::Config => self.config.aside(ui, &mut self.core).unwrap(),
+                            Tab::Tasks => self.tasks.aside(ui, &mut self.core),
+                            Tab::Stats => self.stats.aside(ui, &mut self.core),
+                            Tab::Config => self.config.aside(ui, &mut self.core),
                         }
                     })
             });
@@ -157,9 +144,9 @@ impl eframe::App for App {
         egui::CentralPanel::default()
             .frame(egui::Frame::default().fill(crate::appearance::BG))
             .show_inside(ui, |ui| match self.current_tab {
-                Tab::Tasks => self.tasks.main(ui, &mut self.core).unwrap(),
-                Tab::Stats => self.stats.main(ui, &mut self.core).unwrap(),
-                Tab::Config => self.config.main(ui, &mut self.core).unwrap(),
+                Tab::Tasks => self.tasks.main(ui, &mut self.core),
+                Tab::Stats => self.stats.main(ui, &mut self.core),
+                Tab::Config => self.config.main(ui, &mut self.core),
             });
     }
 }
