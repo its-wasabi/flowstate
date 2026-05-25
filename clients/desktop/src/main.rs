@@ -90,24 +90,39 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // let current_zoom = ctx.zoom_factor();
-        // let min_zoom = 0.8;
-        // let max_zoom = 2.0;
-        // if current_zoom < min_zoom || current_zoom > max_zoom {
-        //     FIX: When zooming instead of clamping it creates flickering
-        //     ctx.set_zoom_factor(current_zoom.clamp(min_zoom, max_zoom));
-        // }
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
+        let current_zoom = ctx.zoom_factor();
+        let min_zoom = 0.8;
+        let max_zoom = 2.0;
+        if current_zoom < min_zoom || current_zoom > max_zoom {
+            ctx.set_zoom_factor(current_zoom.clamp(min_zoom, max_zoom));
+        }
+        self.logic(ctx, frame);
+    }
 
-        // if ctx.input(|i| i.viewport().close_requested()) {
-        //     if let Some(persistent_id_name) = self.tasks.active_edit.take() {
-        //         let name = ctx.data_mut(|d| {
-        //             if let Some(x) = d.get_temp::<String>(persistent_id_name) {
-        //             };
-        //         })
-        //         let _ = self.core.tree.change_node_name(&id, buffer);
-        //     }
-        // }
+    fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        println!("[:L:G:]");
+        if ctx.input(|i| i.viewport().close_requested()) {
+            println!(
+                "[:L:G:]::[CLOSE]: {{{:?}, {:?}}}",
+                self.tasks.active_name_edit, self.tasks.active_desc_edit
+            );
+            if let Some((egui_id, obj_id)) = self.tasks.active_name_edit.take()
+                && let Some(name) = ctx.data_mut(|d| d.get_temp::<String>(egui_id))
+                && let Err(err) = self.core.tree.change_node_name(&obj_id, name)
+            {
+                eprintln!("FAILED: To commit dangling name on exit: {err:?}");
+            }
+
+            if let Some((egui_id, obj_id)) = self.tasks.active_desc_edit.take()
+                && let Some(desc) = ctx.data_mut(|d| d.get_temp::<String>(egui_id))
+                && let Err(err) = self.core.tree.change_node_desc(&obj_id, desc)
+            {
+                eprintln!("FAILED: To commit dangling desc on exit: {err:?}");
+            }
+
+            self.core.save().unwrap();
+        }
     }
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {

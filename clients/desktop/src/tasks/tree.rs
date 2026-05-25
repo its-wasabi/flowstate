@@ -1,5 +1,6 @@
 // TODO: Add icons to tree as customization option
 
+#[derive(Debug)]
 pub struct TreeState;
 
 impl TreeState {
