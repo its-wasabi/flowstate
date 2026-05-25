@@ -57,6 +57,8 @@ impl Tasks {
                             ),
                     );
                 });
+        } else {
+            eprintln!("FAILED TO DISPLAY TOP BAR");
         }
     }
 
@@ -106,6 +108,7 @@ impl Tasks {
 
                             if name_edit.changed() {
                                 self.active_name_edit = Some((name_id, self.current_task.clone()));
+                                ui.data_mut(|d| d.insert_temp(name_id, display_name.clone()));
                                 core.tree.change_node_name_cache(
                                     &self.current_task,
                                     display_name.clone(),
@@ -134,6 +137,7 @@ impl Tasks {
                             if desc_edit.changed() {
                                 println!("set");
                                 self.active_desc_edit = Some((desc_id, self.current_task.clone()));
+                                ui.data_mut(|d| d.insert_temp(desc_id, display_desc.clone()));
                                 core.tree.change_node_desc_cache(
                                     &self.current_task,
                                     display_desc.clone(),
@@ -336,6 +340,7 @@ impl Tasks {
 
                     if name_edit.changed() {
                         self.active_name_edit = Some((name_id, id.clone()));
+                        ui.data_mut(|d| d.insert_temp(name_id, display_name.clone()));
                         core.tree.change_node_name_cache(id, display_name.clone());
                     }
 
@@ -358,16 +363,11 @@ impl Tasks {
         child_id: &automerge::ObjId,
         collapsing_state: &mut egui::collapsing_header::CollapsingState,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        if ui
-            .icon_button(
-                crate::appearance::CHILD_BUTTON_V2.into(),
-                crate::icons::right(),
-                egui::Color32::WHITE,
-            )
-            .clicked()
-        {
-            self.current_task = child_id.clone();
-        }
+        let right = ui.icon_button(
+            crate::appearance::CHILD_BUTTON_V2.into(),
+            crate::icons::right(),
+            egui::Color32::WHITE,
+        );
 
         ui.add_space(6.0);
 
@@ -377,30 +377,19 @@ impl Tasks {
             crate::icons::panel_open()
         };
 
-        if ui
-            .icon_button(
-                crate::appearance::CHILD_BUTTON_V2.into(),
-                panel_icon,
-                egui::Color32::WHITE,
-            )
-            .clicked()
-        {
-            collapsing_state.toggle(ui);
-        }
+        let panel_toggle = ui.icon_button(
+            crate::appearance::CHILD_BUTTON_V2.into(),
+            panel_icon,
+            egui::Color32::WHITE,
+        );
 
         ui.add_space(6.0);
 
-        if ui
-            .icon_button(
-                crate::appearance::CHILD_BUTTON_V2.into(),
-                crate::icons::delete(),
-                egui::Color32::RED,
-            )
-            .clicked()
-            && let Err(err) = core.tree.remove(child_id)
-        {
-            eprintln!("{err:?}");
-        }
+        let delete = ui.icon_button(
+            crate::appearance::CHILD_BUTTON_V2.into(),
+            crate::icons::delete(),
+            egui::Color32::RED,
+        );
 
         if core.tree.is_leaf(child_id)? {
             ui.add_space(8.0);
@@ -428,6 +417,20 @@ impl Tasks {
             {
                 eprintln!("{err:?}");
             }
+        }
+
+        if right.clicked() {
+            self.current_task = child_id.clone();
+        }
+
+        if panel_toggle.clicked() {
+            collapsing_state.toggle(ui);
+        }
+
+        if delete.clicked()
+            && let Err(err) = core.tree.remove(child_id)
+        {
+            eprintln!("{err:?}");
         }
 
         Ok(())

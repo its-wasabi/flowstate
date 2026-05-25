@@ -88,12 +88,7 @@ impl eframe::App for App {
     }
 
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        println!("[:L:G:]");
         if ctx.input(|i| i.viewport().close_requested()) {
-            println!(
-                "[:L:G:]::[CLOSE]: {{{:?}, {:?}}}",
-                self.tasks.active_name_edit, self.tasks.active_desc_edit
-            );
             if let Some((egui_id, obj_id)) = self.tasks.active_name_edit.take()
                 && let Some(name) = ctx.data_mut(|d| d.get_temp::<String>(egui_id))
                 && let Err(err) = self.core.tree.change_node_name(&obj_id, name)
@@ -107,8 +102,6 @@ impl eframe::App for App {
             {
                 eprintln!("FAILED: To commit dangling desc on exit: {err:?}");
             }
-
-            self.core.save().unwrap();
         }
     }
 
