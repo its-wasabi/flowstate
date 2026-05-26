@@ -77,16 +77,6 @@ impl App {
 }
 
 impl eframe::App for App {
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        let current_zoom = ctx.zoom_factor();
-        let min_zoom = 0.8;
-        let max_zoom = 2.0;
-        if current_zoom < min_zoom || current_zoom > max_zoom {
-            ctx.set_zoom_factor(current_zoom.clamp(min_zoom, max_zoom));
-        }
-        self.logic(ctx, frame);
-    }
-
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if ctx.input(|i| i.viewport().close_requested()) {
             if let Some((egui_id, obj_id)) = self.tasks.active_name_edit.take()
