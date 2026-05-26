@@ -292,8 +292,7 @@ impl Tasks {
 
     #[inline]
     fn child_progress(ui: &mut egui::Ui, child_data: &application::tree::Node) {
-        ui.add_sized(
-            [ui.available_width(), 18.0],
+        ui.add(
             egui::ProgressBar::new(child_data.progress.procentage() / 100.0)
                 .corner_radius(0)
                 .fill(crate::appearance::FG)
