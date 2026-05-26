@@ -67,7 +67,6 @@ impl TreeState {
                 ui.painter().rect_filled(row_rect, 0.0, bg);
             }
 
-            let arrow_font_id = egui::FontId::proportional(16.0);
             let text_font_id = egui::FontId::proportional(13.0);
 
             let arrow_width = row_height;
@@ -79,15 +78,13 @@ impl TreeState {
             arrow_center_x = Some(arrow_rect.center().x);
 
             if has_children {
-                let symbol = if is_open { "⏷" } else { "⏵" };
+                let icon = if is_open {
+                    crate::icons::down(crate::icons::IconSize::Small)
+                } else {
+                    crate::icons::right(crate::icons::IconSize::Small)
+                };
 
-                ui.painter().text(
-                    arrow_rect.center(),
-                    egui::Align2::CENTER_CENTER,
-                    symbol,
-                    arrow_font_id,
-                    text_color,
-                );
+                ui.put(arrow_rect, icon);
             }
 
             let text_pos = egui::pos2(arrow_rect.right() + 4.0, row_rect.center().y);

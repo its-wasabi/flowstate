@@ -215,3 +215,48 @@ impl ButtonsExt for Ui {
         .inner
     }
 }
+
+pub trait ProgressBarExt {
+    fn top_progress_bar(&mut self, id: &'static str, progress: f32) -> Response;
+    fn frame_progress_bar(&mut self, progress: f32) -> Response;
+}
+
+impl ProgressBarExt for Ui {
+    fn top_progress_bar(&mut self, id: &'static str, progress: f32) -> Response {
+        egui::Panel::top(id)
+            .frame(egui::Frame::default())
+            .min_size(crate::appearance::TOP_BAR_HEIGHT)
+            .show_inside(self, |ui| {
+                ui.add(
+                    egui::ProgressBar::new(progress / 100.0)
+                        .corner_radius(0)
+                        .fill(crate::appearance::FG)
+                        .desired_height(ui.available_height())
+                        .text(
+                            egui::RichText::new(format!(" {progress}%"))
+                                .color(crate::appearance::BORDER),
+                        ),
+                );
+            })
+            .response
+    }
+
+    fn frame_progress_bar(&mut self, progress: f32) -> Response {
+        let response = self.add(
+            egui::ProgressBar::new(progress / 100.0)
+                .corner_radius(0)
+                .fill(crate::appearance::FG)
+                .desired_height(18.0)
+                .text(
+                    egui::RichText::new(format!(" {progress}%"))
+                        .size(13.0)
+                        .color(crate::appearance::BORDER)
+                        .strong(),
+                ),
+        );
+
+        self.add(egui::Separator::default().spacing(0.0));
+
+        response
+    }
+}
