@@ -53,9 +53,9 @@ impl Tasks {
             let desc_id = ui.make_persistent_id(("node_desc_edit", &self.current_task));
 
             let mut display_name =
-                ui.data_mut(|d| d.get_temp::<String>(name_id).unwrap_or_else(|| node.name));
+                ui.data_mut(|d| d.get_temp::<String>(name_id).unwrap_or(node.name));
             let mut display_desc =
-                ui.data_mut(|d| d.get_temp::<String>(desc_id).unwrap_or_else(|| node.desc));
+                ui.data_mut(|d| d.get_temp::<String>(desc_id).unwrap_or(node.desc));
 
             ui.horizontal(|ui| {
                 egui::Frame::default()
@@ -82,11 +82,12 @@ impl Tasks {
                     .show(ui, |ui| {
                         ui.vertical(|ui| {
                             let name_edit = ui.add(
-                                egui::TextEdit::singleline(&mut display_name)
+                                egui::TextEdit::multiline(&mut display_name)
+                                    .desired_rows(1)
+                                    .desired_width(ui.available_width())
                                     .font(egui::TextStyle::Heading)
                                     .frame(egui::Frame::default())
-                                    .hint_text("task name")
-                                    .desired_width(ui.available_width()),
+                                    .hint_text("task name"),
                             );
 
                             if name_edit.changed() {
@@ -108,13 +109,15 @@ impl Tasks {
                                 self.active_name_edit = None;
                             }
 
+                            ui.add_space(4.0);
+
                             let desc_edit = ui.add(
                                 egui::TextEdit::multiline(&mut display_desc)
+                                    .desired_rows(1)
+                                    .desired_width(ui.available_width())
                                     .font(egui::TextStyle::Body)
                                     .frame(egui::Frame::default())
-                                    .hint_text("task description")
-                                    .desired_rows(1)
-                                    .desired_width(ui.available_width()),
+                                    .hint_text("task description"),
                             );
 
                             if desc_edit.changed() {
@@ -229,6 +232,7 @@ impl Tasks {
                                             child_id,
                                             &mut collapsing_state,
                                         );
+
                                         ui.add_space(6.0);
 
                                         Self::child_label(self, ui, child_id, core, child_data);
@@ -272,6 +276,7 @@ impl Tasks {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
             egui::ScrollArea::horizontal()
                 .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+                .auto_shrink([false, true])
                 .content_margin(egui::Margin::symmetric(6, 0))
                 .show(ui, |ui| {
                     let name_edit = ui.add(
@@ -279,8 +284,7 @@ impl Tasks {
                             .font(egui::TextStyle::Button)
                             .frame(egui::Frame::default())
                             .hint_text("task name")
-                            .clip_text(false)
-                            .desired_width(ui.available_width()),
+                            .clip_text(false),
                     );
 
                     if name_edit.changed() {
@@ -336,9 +340,7 @@ impl Tasks {
             egui::Color32::RED,
         );
 
-        if let Ok(is_leaf) = core.tree.is_leaf(child_id)
-            && is_leaf
-        {
+        if core.tree.is_leaf(child_id).unwrap_or(false) {
             ui.add_space(8.0);
             Self::leaf_add_min_buttons(ui, core, child_id);
         }

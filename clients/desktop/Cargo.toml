@@ -19,3 +19,5 @@ eframe = { version = "0.34.2", default-features = false, features = [
 ] }
 egui_extras = { version = "0.34.2", features = ["svg"] }
 egui_plot = "0.35.0"
+
+egui_logger = "0.10.0"

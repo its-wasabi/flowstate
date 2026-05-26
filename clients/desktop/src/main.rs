@@ -78,6 +78,13 @@ impl App {
 
 impl eframe::App for App {
     fn logic(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        #[cfg(debug_assertions)]
+        {
+            egui::Window::new("Log").show(ctx, |ui| {
+                egui_logger::logger_ui().show(ui);
+            });
+        }
+
         if ctx.input(|i| i.viewport().close_requested()) {
             if let Some((egui_id, obj_id)) = self.tasks.active_name_edit.take()
                 && let Some(name) = ctx.data_mut(|d| d.get_temp::<String>(egui_id))
@@ -136,6 +143,8 @@ impl eframe::App for App {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = App::new()?;
+
+    egui_logger::builder().init().unwrap();
 
     Ok(eframe::run_native(
         application::APP_NAME,
