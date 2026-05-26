@@ -372,9 +372,9 @@ impl Tasks {
         ui.add_space(6.0);
 
         let panel_icon = if collapsing_state.is_open() {
-            crate::icons::panel_close()
+            crate::icons::down_close()
         } else {
-            crate::icons::panel_open()
+            crate::icons::down_open()
         };
 
         let panel_toggle = ui.icon_button(
