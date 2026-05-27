@@ -1,5 +1,7 @@
 // mod tree;
 
+use egui::epaint::text::layout;
+
 use crate::appearance::{ButtonsExt, ProgressBarExt};
 
 fn name_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
@@ -153,8 +155,6 @@ impl Tasks {
                         });
                     });
             });
-
-            ui.add(egui::Separator::default().spacing(0.0));
         }
     }
 
@@ -188,10 +188,11 @@ impl Tasks {
         if let Ok(children) = core.tree.get_children(&self.current_task) {
             match children {
                 application::tree::NodeContent::Leaf(_node) => {
-                    Self::leaf_control_panel(ui, core, &self.current_task);
+                    Self::leaf_control_panel(self, ui, core);
                 }
                 application::tree::NodeContent::Inner(nodes) => {
                     Self::parent_task(self, core, ui);
+                    ui.add(egui::Separator::default().spacing(0.0));
                     egui::ScrollArea::vertical()
                         .content_margin(egui::Margin::symmetric(6, 4))
                         .auto_shrink([false, true])
@@ -316,23 +317,53 @@ impl Tasks {
     }
 
     #[inline]
-    fn leaf_control_panel(ui: &mut egui::Ui, core: &mut application::Core, id: &automerge::ObjId) {
-        let delete = ui.icon_button(
-            crate::appearance::CHILD_BUTTON_V2.into(),
-            crate::icons::delete(crate::icons::IconSize::Mid),
-            egui::Color32::RED,
-        );
+    fn leaf_control_panel(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
+        egui::Frame::default()
+            .inner_margin(egui::Margin::same(4))
+            .show(ui, |ui| {
+                ui.horizontal(|ui| {
+                    if ui
+                        .icon_button(
+                            crate::appearance::CHILD_BUTTON_V2.into(),
+                            crate::icons::minus(crate::icons::IconSize::Mid),
+                            egui::Color32::YELLOW,
+                        )
+                        .clicked()
+                        && let Err(err) = core.tree.change_node_completed(&self.current_task, -1)
+                    {
+                        eprintln!("{err:?}");
+                    }
 
-        if core.tree.is_leaf(id).unwrap_or(false) {
-            ui.add_space(8.0);
-            Self::leaf_add_min_buttons(ui, core, id);
-        }
+                    if ui
+                        .icon_button(
+                            crate::appearance::CHILD_BUTTON_V2.into(),
+                            crate::icons::plus(crate::icons::IconSize::Mid),
+                            egui::Color32::GREEN,
+                        )
+                        .clicked()
+                        && let Err(err) = core.tree.change_node_completed(&self.current_task, 1)
+                    {
+                        eprintln!("{err:?}");
+                    }
 
-        if delete.clicked()
-            && let Err(err) = core.tree.remove(id)
-        {
-            eprintln!("{err:?}");
-        }
+                    ui.add_space(6.0);
+
+                    let delete = ui.icon_button(
+                        crate::appearance::CHILD_BUTTON_V2.into(),
+                        crate::icons::delete(crate::icons::IconSize::Mid),
+                        egui::Color32::RED,
+                    );
+
+                    if delete.clicked()
+                        && let Err(err) = core.tree.remove(&self.current_task)
+                    {
+                        eprintln!("{err:?}");
+                    }
+                });
+            });
+
+        ui.add(egui::Separator::default().spacing(0.0));
+        Self::parent_task(self, core, ui);
     }
 
     #[inline]

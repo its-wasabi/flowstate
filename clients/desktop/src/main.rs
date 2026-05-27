@@ -104,6 +104,9 @@ impl eframe::App for App {
 
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let full_width = ui.available_width();
+        // TODO: Make top part of the panel actually populated by the View::aside() but the bottom
+        // part should take timer (displayed optionally based on the fact if some is active now) use
+        // resizable Panel::bottom() for that
         egui::Panel::left("aside")
             .frame(egui::Frame::default().fill(appearance::ASIDE_BG))
             .min_size(appearance::NAV_MIN_WIDTH)
