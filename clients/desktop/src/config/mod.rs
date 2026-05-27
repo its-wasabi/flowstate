@@ -1,8 +1,12 @@
-pub struct Config {}
+pub struct Config {
+    pub tmp_show_timer: bool,
+}
 
 impl Config {
     pub const fn new() -> Self {
-        Self {}
+        Self {
+            tmp_show_timer: false,
+        }
     }
 }
 
@@ -23,6 +27,15 @@ impl super::View for Config {
                 super::UI_VERSION.1,
                 super::UI_VERSION.2
             ));
+
+            let timer_button_text = if self.tmp_show_timer {
+                "hide timer"
+            } else {
+                "show timer"
+            };
+            if ui.add(egui::Button::new(timer_button_text)).clicked() {
+                self.tmp_show_timer = !self.tmp_show_timer;
+            }
         });
     }
 
