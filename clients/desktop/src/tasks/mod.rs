@@ -2,6 +2,16 @@ mod tree;
 
 use crate::appearance::{ButtonsExt, ProgressBarExt};
 
+fn name_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
+    ui.make_persistent_id(("name_edit", id))
+}
+fn desc_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
+    ui.make_persistent_id(("desc_edit", id))
+}
+fn collapse_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
+    ui.make_persistent_id(("collapse_id", id))
+}
+
 #[derive(Debug)]
 pub struct Tasks {
     current_task: automerge::ObjId,
@@ -26,9 +36,12 @@ impl Tasks {
 
 impl super::View for Tasks {
     fn main(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
+        ui.ctx().set_debug_on_hover(true);
         Self::parent_progress(self, core, ui);
         Self::add_button(self, ui, core);
+
         Self::parent_task(self, core, ui);
+
         Self::children(self, ui, core);
     }
 
@@ -50,8 +63,8 @@ impl Tasks {
     #[inline]
     fn parent_task(&mut self, core: &mut application::Core, ui: &mut egui::Ui) {
         if let Ok(node) = core.tree.get_node(&self.current_task) {
-            let name_id = ui.make_persistent_id(("node_name_edit", &self.current_task));
-            let desc_id = ui.make_persistent_id(("node_desc_edit", &self.current_task));
+            let name_id = name_edit_id(ui, &self.current_task);
+            let desc_id = desc_edit_id(ui, &self.current_task);
 
             let mut display_name =
                 ui.data_mut(|d| d.get_temp::<String>(name_id).unwrap_or(node.name));
@@ -148,11 +161,12 @@ impl Tasks {
     fn add_button(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
         egui::Panel::bottom("add_button")
             .frame(egui::Frame::default())
+            .exact_size(crate::appearance::CHILD_BUTTON)
+            .resizable(false)
             .show_inside(ui, |ui| {
-                let button_size = egui::vec2(ui.available_width(), crate::appearance::CHILD_BUTTON);
                 if ui
                     .icon_button_borderless(
-                        button_size,
+                        egui::Vec2::new(ui.available_width(), ui.available_height()),
                         crate::icons::add(crate::icons::IconSize::Mid),
                         egui::Color32::WHITE,
                     )
@@ -169,43 +183,35 @@ impl Tasks {
 
     #[inline]
     fn children(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        egui::CentralPanel::default()
-            .frame(egui::Frame::default())
-            .show_inside(ui, |ui| {
-                if let Ok(children) = core.tree.get_children(&self.current_task) {
-                    if children.is_empty() {
-                        Self::leaf_control_panel(ui, core);
-                    } else {
-                        egui::ScrollArea::vertical()
-                            .content_margin(egui::Margin::symmetric(6, 4))
-                            .show(ui, |ui| {
-                                for (child_id, child_data) in children {
-                                    ui.push_id(&child_id, |ui| {
-                                        Self::child(self, ui, core, &child_id, &child_data);
-                                    });
-                                }
+        // TODO: Maybe make get_children return enum such as enum { Children(Vec<>), Leaf }
+        if let Ok(children) = core.tree.get_children(&self.current_task) {
+            if children.is_empty() {
+                Self::leaf_control_panel(ui, core, &self.current_task);
+            } else {
+                egui::ScrollArea::vertical()
+                    .content_margin(egui::Margin::symmetric(6, 4))
+                    .auto_shrink([false; 2])
+                    .show(ui, |ui| {
+                        for (id, node) in children {
+                            ui.push_id(&id, |ui| {
+                                Self::child(self, ui, core, &id, &node);
                             });
-                    }
-                }
-            });
-    }
-
-    #[inline]
-    fn leaf_control_panel(ui: &mut egui::Ui, _core: &application::Core) {
-        ui.centered_and_justified(|ui| ui.heading("empty (todo)"));
+                        }
+                    });
+            }
+        }
     }
 
     fn child(
         &mut self,
         ui: &mut egui::Ui,
         core: &mut application::Core,
-        child_id: &automerge::ObjId,
-        child_data: &application::tree::Node,
+        id: &automerge::ObjId,
+        node: &application::tree::Node,
     ) {
-        let collapsing_id = ui.make_persistent_id(("collapse_child_menu", child_id));
         let mut collapsing_state = egui::collapsing_header::CollapsingState::load_with_default_open(
             ui.ctx(),
-            collapsing_id,
+            collapse_id(ui, id),
             false,
         );
 
@@ -214,7 +220,7 @@ impl Tasks {
             .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
             .show(ui, |ui| {
                 ui.vertical(|ui| {
-                    ui.frame_progress_bar(child_data.progress.procentage());
+                    ui.frame_progress_bar(node.progress.procentage());
 
                     egui::Frame::default()
                         .inner_margin(egui::Margin::same(4))
@@ -227,13 +233,13 @@ impl Tasks {
                                             self,
                                             ui,
                                             core,
-                                            child_id,
+                                            id,
                                             &mut collapsing_state,
                                         );
 
                                         ui.add_space(6.0);
 
-                                        Self::child_label(self, ui, child_id, core, child_data);
+                                        Self::child_label(self, ui, id, core, node);
                                     },
                                 );
                             });
@@ -264,7 +270,7 @@ impl Tasks {
         core: &mut application::Core,
         node: &application::tree::Node,
     ) {
-        let name_id = ui.make_persistent_id(("node_edit_name", id));
+        let name_id = name_edit_id(ui, id);
 
         let mut display_name = ui.data_mut(|d| {
             d.get_temp::<String>(name_id)
@@ -279,10 +285,11 @@ impl Tasks {
                 .show(ui, |ui| {
                     let name_edit = ui.add(
                         egui::TextEdit::singleline(&mut display_name)
+                            .clip_text(false)
+                            .desired_width(ui.available_width())
                             .font(egui::TextStyle::Button)
                             .frame(egui::Frame::default())
-                            .hint_text("task name")
-                            .clip_text(false),
+                            .hint_text("task name"),
                     );
 
                     if name_edit.changed() {
@@ -300,6 +307,26 @@ impl Tasks {
                     }
                 })
         });
+    }
+
+    #[inline]
+    fn leaf_control_panel(ui: &mut egui::Ui, core: &mut application::Core, id: &automerge::ObjId) {
+        let delete = ui.icon_button(
+            crate::appearance::CHILD_BUTTON_V2.into(),
+            crate::icons::delete(crate::icons::IconSize::Mid),
+            egui::Color32::RED,
+        );
+
+        if core.tree.is_leaf(id).unwrap_or(false) {
+            ui.add_space(8.0);
+            Self::leaf_add_min_buttons(ui, core, id);
+        }
+
+        if delete.clicked()
+            && let Err(err) = core.tree.remove(id)
+        {
+            eprintln!("{err:?}");
+        }
     }
 
     #[inline]
