@@ -32,8 +32,8 @@ pub fn apply(cc: &eframe::CreationContext) {
     v.window_stroke = Stroke::new(BORDER_WIDTH, BORDER);
 
     v.selection = Selection {
-        bg_fill: ASIDE_BG,
-        stroke: Stroke::new(1.0, FG),
+        bg_fill: FG,
+        stroke: Stroke::new(1.0, BG),
     };
 
     let flat =
