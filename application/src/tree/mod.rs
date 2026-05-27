@@ -135,7 +135,7 @@ impl Tree {
     pub fn append_child(
         &mut self,
         parent_id: &automerge::ObjId,
-        node: node::Node,
+        node: &node::Node,
     ) -> error::Result<automerge::ObjId> {
         let mut tx = self.document.transaction();
         let list_id = match tx.get(parent_id, CHILDREN)? {
@@ -247,13 +247,13 @@ impl Tree {
             .get(id, NODE_TASK_COMPLETED)?
             .ok_or(error::TreeError::InvalidNodeType)?;
         let current_completed = match completed_val.into_scalar() {
-            Ok(ScalarValue::Counter(c)) => i64::try_from(c).unwrap_or(0),
+            Ok(ScalarValue::Counter(counter)) => i64::from(counter),
             _ => return Err(error::TreeError::InvalidNodeType),
         };
 
         let safe_delta = {
-            let safe_base = current_completed.clamp(0, total as i64);
-            let safe_target = (safe_base + delta).clamp(0, total as i64);
+            let safe_base = current_completed.clamp(0, i64::from(total));
+            let safe_target = (safe_base + delta).clamp(0, i64::from(total));
             safe_target - current_completed
         };
 

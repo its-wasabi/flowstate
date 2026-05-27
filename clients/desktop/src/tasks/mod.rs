@@ -157,9 +157,10 @@ impl Tasks {
                         egui::Color32::WHITE,
                     )
                     .clicked()
-                    && let Ok(new_node) = core
-                        .tree
-                        .append_child(&self.current_task, application::tree::node::Node::default())
+                    && let Ok(new_node) = core.tree.append_child(
+                        &self.current_task,
+                        &application::tree::node::Node::default(),
+                    )
                 {
                     self.current_task = new_node;
                 }
