@@ -1,3 +1,6 @@
+// IMPORTANT: Instead of update_up_from try to extract update patch or some change log from
+// automerge transaction commit and apply it with apply_patches method for Projection
+
 pub mod error;
 pub mod node;
 mod projection;
@@ -18,6 +21,11 @@ pub const NODE_DESC: &str = "d";
 pub const NODE_TASK_TOTAL: &str = "t";
 /// Number of completed tasks for that node
 pub const NODE_TASK_COMPLETED: &str = "c";
+
+pub enum NodeContent {
+    Leaf(node::Node),
+    Inner(Vec<(automerge::ObjId, node::Node)>),
+}
 
 #[derive(Debug)]
 pub struct Tree {
@@ -92,25 +100,27 @@ impl Tree {
             .ok_or(error::TreeError::MissingProperty)
     }
 
-    pub fn get_children(
-        &self,
-        id: &automerge::ObjId,
-    ) -> error::Result<Vec<(automerge::ObjId, node::Node)>> {
+    pub fn get_children(&self, id: &automerge::ObjId) -> error::Result<NodeContent> {
         let child_ids = self
             .projection
             .children
             .get(id)
             .cloned()
             .unwrap_or_default();
-        let mut result = Vec::with_capacity(child_ids.len());
 
-        for child_id in child_ids {
-            if let Some(node) = self.projection.nodes.get(&child_id) {
-                result.push((child_id, node.clone()));
+        if child_ids.is_empty() {
+            Ok(NodeContent::Leaf(node::Node::from_doc(&self.document, id)?))
+        } else {
+            let mut childrens = Vec::with_capacity(child_ids.len());
+
+            for child_id in child_ids {
+                if let Some(node) = self.projection.nodes.get(&child_id).cloned() {
+                    childrens.push((child_id, node));
+                }
             }
-        }
 
-        Ok(result)
+            Ok(NodeContent::Inner(childrens))
+        }
     }
 }
 
@@ -167,10 +177,6 @@ impl Tree {
         let mut tx = self.document.transaction();
         tx.delete(&parent_list.obj, parent_list.prop)?;
         tx.commit();
-
-        if let Some(siblings) = self.projection.children.get_mut(&parent_id) {
-            siblings.retain(|cid| cid != id);
-        }
 
         self.projection.purge_recursive(id);
         self.projection

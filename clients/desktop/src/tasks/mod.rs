@@ -1,4 +1,4 @@
-mod tree;
+// mod tree;
 
 use crate::appearance::{ButtonsExt, ProgressBarExt};
 
@@ -17,8 +17,7 @@ pub struct Tasks {
     current_task: automerge::ObjId,
     pub active_name_edit: Option<(egui::Id, automerge::ObjId)>,
     pub active_desc_edit: Option<(egui::Id, automerge::ObjId)>,
-
-    tree_state: tree::TreeState,
+    // tree_state: tree::TreeState,
 }
 
 impl Tasks {
@@ -28,25 +27,27 @@ impl Tasks {
 
             active_name_edit: None,
             active_desc_edit: None,
-
-            tree_state: tree::TreeState::new(),
+            // tree_state: tree::TreeState::new(),
         }
     }
 }
 
 impl super::View for Tasks {
     fn main(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        ui.ctx().set_debug_on_hover(true);
+        #[cfg(debug_assertions)]
+        {
+            ui.ctx().set_debug_on_hover(true);
+        }
+
         Self::parent_progress(self, core, ui);
         Self::add_button(self, ui, core);
-
-        Self::parent_task(self, core, ui);
 
         Self::children(self, ui, core);
     }
 
     fn aside(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        self.tree_state.show(ui, &core.tree, &mut self.current_task);
+        // self.tree_state.show(ui, &core.tree, &mut self.current_task);
+        ui.centered_and_justified(|ui| ui.heading("(TODO)"));
     }
 }
 
@@ -185,19 +186,24 @@ impl Tasks {
     fn children(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
         // TODO: Maybe make get_children return enum such as enum { Children(Vec<>), Leaf }
         if let Ok(children) = core.tree.get_children(&self.current_task) {
-            if children.is_empty() {
-                Self::leaf_control_panel(ui, core, &self.current_task);
-            } else {
-                egui::ScrollArea::vertical()
-                    .content_margin(egui::Margin::symmetric(6, 4))
-                    .auto_shrink([false; 2])
-                    .show(ui, |ui| {
-                        for (id, node) in children {
-                            ui.push_id(&id, |ui| {
-                                Self::child(self, ui, core, &id, &node);
-                            });
-                        }
-                    });
+            match children {
+                application::tree::NodeContent::Leaf(_node) => {
+                    Self::leaf_control_panel(ui, core, &self.current_task);
+                }
+                application::tree::NodeContent::Inner(nodes) => {
+                    Self::parent_task(self, core, ui);
+                    egui::ScrollArea::vertical()
+                        .content_margin(egui::Margin::symmetric(6, 4))
+                        .auto_shrink([false, true])
+                        .show(ui, |ui| {
+                            for (id, node) in nodes {
+                                ui.push_id(&id, |ui| {
+                                    Self::child(self, ui, core, &id, &node);
+                                });
+                            }
+                            ui.add_space(6.0);
+                        });
+                }
             }
         }
     }
