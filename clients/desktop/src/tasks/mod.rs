@@ -1,7 +1,5 @@
 // mod tree;
 
-use egui::epaint::text::layout;
-
 use crate::appearance::{ButtonsExt, ProgressBarExt};
 
 fn name_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
@@ -10,10 +8,6 @@ fn name_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
 fn desc_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
     ui.make_persistent_id(("desc_edit", id))
 }
-fn collapse_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
-    ui.make_persistent_id(("collapse_id", id))
-}
-
 #[derive(Debug)]
 pub struct Tasks {
     current_task: automerge::ObjId,
@@ -216,12 +210,6 @@ impl Tasks {
         id: &automerge::ObjId,
         node: &application::tree::Node,
     ) {
-        let mut collapsing_state = egui::collapsing_header::CollapsingState::load_with_default_open(
-            ui.ctx(),
-            collapse_id(ui, id),
-            false,
-        );
-
         egui::Frame::default()
             .outer_margin(egui::Margin::symmetric(0, 4))
             .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
@@ -236,13 +224,7 @@ impl Tasks {
                                 ui.with_layout(
                                     egui::Layout::right_to_left(egui::Align::Center),
                                     |ui| {
-                                        Self::button_section(
-                                            self,
-                                            ui,
-                                            core,
-                                            id,
-                                            &mut collapsing_state,
-                                        );
+                                        Self::button_section(self, ui, core, id);
 
                                         ui.add_space(6.0);
 
@@ -251,20 +233,6 @@ impl Tasks {
                                 );
                             });
                         });
-
-                    collapsing_state.show_body_unindented(ui, |ui| {
-                        egui::Frame::default()
-                            .inner_margin(egui::Margin {
-                                top: 2,
-                                left: 6,
-                                right: 6,
-                                bottom: 6,
-                            })
-                            .show(ui, |ui| {
-                                ui.set_max_height(90.0);
-                                ui.centered_and_justified(|ui| ui.label("(todo)"))
-                            });
-                    });
                 });
             });
     }
@@ -346,7 +314,7 @@ impl Tasks {
                         eprintln!("{err:?}");
                     }
 
-                    ui.add_space(6.0);
+                    ui.add_space(4.0);
 
                     let delete = ui.icon_button(
                         crate::appearance::CHILD_BUTTON_V2.into(),
@@ -372,7 +340,6 @@ impl Tasks {
         ui: &mut egui::Ui,
         core: &mut application::Core,
         child_id: &automerge::ObjId,
-        collapsing_state: &mut egui::collapsing_header::CollapsingState,
     ) {
         let right = ui.icon_button(
             crate::appearance::CHILD_BUTTON_V2.into(),
@@ -380,21 +347,7 @@ impl Tasks {
             egui::Color32::WHITE,
         );
 
-        ui.add_space(6.0);
-
-        let panel_icon = if collapsing_state.is_open() {
-            crate::icons::down_close(crate::icons::IconSize::Mid)
-        } else {
-            crate::icons::down_open(crate::icons::IconSize::Mid)
-        };
-
-        let panel_toggle = ui.icon_button(
-            crate::appearance::CHILD_BUTTON_V2.into(),
-            panel_icon,
-            egui::Color32::WHITE,
-        );
-
-        ui.add_space(6.0);
+        ui.add_space(4.0);
 
         let delete = ui.icon_button(
             crate::appearance::CHILD_BUTTON_V2.into(),
@@ -403,16 +356,12 @@ impl Tasks {
         );
 
         if core.tree.is_leaf(child_id).unwrap_or(false) {
-            ui.add_space(8.0);
+            ui.add_space(4.0);
             Self::leaf_add_min_buttons(ui, core, child_id);
         }
 
         if right.clicked() {
             self.current_task = child_id.clone();
-        }
-
-        if panel_toggle.clicked() {
-            collapsing_state.toggle(ui);
         }
 
         if delete.clicked()

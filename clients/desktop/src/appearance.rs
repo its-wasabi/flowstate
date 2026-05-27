@@ -65,6 +65,8 @@ pub fn apply(cc: &eframe::CreationContext) {
 
     let mut style = (*cc.egui_ctx.global_style()).clone();
 
+    style.interaction.resize_grab_radius_side = 28.0;
+
     style.spacing = egui::style::Spacing {
         item_spacing: egui::vec2(0.0, 0.0),
         window_margin: egui::Margin::ZERO,

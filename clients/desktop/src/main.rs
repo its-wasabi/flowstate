@@ -119,9 +119,9 @@ impl eframe::App for App {
                     egui::Panel::bottom("timer")
                         .resizable(true)
                         .frame(egui::Frame::default())
-                        .default_size(ui.available_height() / 2.0)
-                        .max_size(ui.available_height() / 1.2)
-                        .min_size(ui.available_height() / 4.4)
+                        .default_size(ui.available_height() / 3.0)
+                        .max_size(ui.available_height() / 2.5)
+                        .min_size(ui.available_height() / 6.0)
                         .show_inside(ui, |ui| {
                             ui.centered_and_justified(|ui| {
                                 ui.heading("todo");
@@ -157,7 +157,11 @@ impl eframe::App for App {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = App::new()?;
 
-    egui_logger::builder().init().unwrap();
+    #[cfg(debug_assertions)]
+    {
+        #[allow(clippy::unwrap_used)]
+        egui_logger::builder().init().unwrap();
+    }
 
     Ok(eframe::run_native(
         application::APP_NAME,
