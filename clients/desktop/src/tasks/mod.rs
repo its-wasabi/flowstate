@@ -5,9 +5,15 @@ use crate::appearance::{ButtonsExt, ProgressBarExt};
 fn name_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
     ui.make_persistent_id(("name_edit", id))
 }
+
 fn desc_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
     ui.make_persistent_id(("desc_edit", id))
 }
+
+fn total_drag_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
+    ui.make_persistent_id(("total_drag", id))
+}
+
 #[derive(Debug)]
 pub struct Tasks {
     current_task: automerge::ObjId,
@@ -181,8 +187,8 @@ impl Tasks {
         // TODO: Maybe make get_children return enum such as enum { Children(Vec<>), Leaf }
         if let Ok(children) = core.tree.get_children(&self.current_task) {
             match children {
-                application::tree::NodeContent::Leaf(_node) => {
-                    Self::leaf_control_panel(self, ui, core);
+                application::tree::NodeContent::Leaf(node) => {
+                    Self::leaf_control_panel(self, ui, core, &node);
                 }
                 application::tree::NodeContent::Inner(nodes) => {
                     Self::parent_task(self, core, ui);
@@ -285,7 +291,19 @@ impl Tasks {
     }
 
     #[inline]
-    fn leaf_control_panel(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
+    fn leaf_control_panel(
+        &mut self,
+        ui: &mut egui::Ui,
+        core: &mut application::Core,
+        node: &application::tree::Node,
+    ) {
+        let total_id = total_drag_id(ui, &self.current_task);
+
+        let mut display_total = ui.data_mut(|d| {
+            d.get_temp::<u32>(total_id)
+                .unwrap_or_else(|| node.progress.total())
+        });
+
         egui::Frame::default()
             .inner_margin(egui::Margin::same(4))
             .show(ui, |ui| {
@@ -312,6 +330,35 @@ impl Tasks {
                         && let Err(err) = core.tree.change_node_completed(&self.current_task, 1)
                     {
                         eprintln!("{err:?}");
+                    }
+
+                    ui.add_space(4.0);
+
+                    let total_edit = {
+                        let v = ui.visuals_mut();
+                        v.widgets.active.fg_stroke.color = crate::appearance::BG;
+
+                        ui.add_sized(
+                            egui::Vec2::new(
+                                crate::appearance::CHILD_BUTTON * 2.0,
+                                ui.available_height(),
+                            ),
+                            egui::DragValue::new(&mut display_total).range(1..=u32::MAX),
+                        )
+                    };
+
+                    if total_edit.changed() {
+                        ui.data_mut(|d| d.insert_temp(total_id, display_total));
+                    }
+                    if total_edit.drag_stopped() || total_edit.lost_focus() {
+                        if let Err(err) = core
+                            .tree
+                            .change_node_total(&self.current_task, display_total)
+                        {
+                            eprintln!("FAILED: To commit total {err:?}");
+                        }
+
+                        ui.data_mut(|d| d.remove::<u32>(total_id));
                     }
 
                     ui.add_space(4.0);
