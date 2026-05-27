@@ -15,6 +15,7 @@ impl Tasks {
     pub const fn new() -> Self {
         Self {
             current_task: automerge::ROOT,
+
             active_name_edit: None,
             active_desc_edit: None,
 
@@ -68,12 +69,9 @@ impl Tasks {
                                 egui::Color32::WHITE,
                             )
                             .clicked()
+                            && let Ok(id) = core.tree.get_parent(&self.current_task)
                         {
-                            if let Ok((id, _)) = core.tree.get_parent(&self.current_task) {
-                                self.current_task = id;
-                            } else {
-                                self.current_task = automerge::ObjId::Root;
-                            }
+                            self.current_task = id;
                         }
                     });
 
@@ -121,7 +119,6 @@ impl Tasks {
                             );
 
                             if desc_edit.changed() {
-                                println!("set");
                                 self.active_desc_edit = Some((desc_id, self.current_task.clone()));
                                 ui.data_mut(|d| d.insert_temp(desc_id, display_desc.clone()));
                                 core.tree.change_node_desc_cache(

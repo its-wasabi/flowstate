@@ -115,20 +115,11 @@ impl Tree {
 }
 
 impl Tree {
-    pub fn get_parent(
-        &self,
-        id: &automerge::ObjId,
-    ) -> error::Result<(automerge::ObjId, node::Node)> {
+    pub fn get_parent(&self, id: &automerge::ObjId) -> error::Result<automerge::ObjId> {
         let mut parents = self.document.parents(id)?;
         parents.next().ok_or(error::TreeError::MissingProperty)?;
         let parent = parents.next().ok_or(error::TreeError::MissingProperty)?;
-
-        if parent.obj == automerge::ObjId::Root {
-            return Err(error::TreeError::MissingRoot);
-        }
-
-        let data = self.get_node(&parent.obj)?;
-        Ok((parent.obj, data))
+        Ok(parent.obj)
     }
 
     pub fn get_progress(&self, id: &automerge::ObjId) -> error::Result<node::Progress> {
