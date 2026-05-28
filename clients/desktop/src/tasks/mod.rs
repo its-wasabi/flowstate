@@ -188,8 +188,8 @@ impl Tasks {
     fn children(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
         if let Ok(children) = core.tree.get_children(&self.current_task) {
             match children {
-                application::tree::NodeContent::Leaf((id, node)) => {
-                    Self::leaf_control_panel(self, ui, &id, core, &node);
+                application::tree::NodeContent::Leaf((_id, node)) => {
+                    Self::leaf_control_panel(self, ui, core, &node);
                 }
                 application::tree::NodeContent::Inner(nodes) => {
                     Self::parent_task(self, core, ui);
@@ -295,7 +295,6 @@ impl Tasks {
     fn leaf_control_panel(
         &mut self,
         ui: &mut egui::Ui,
-        id: &automerge::ObjId,
         core: &mut application::Core,
         node: &application::tree::Node,
     ) {
@@ -310,6 +309,20 @@ impl Tasks {
             .inner_margin(egui::Margin::same(4))
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
+                    if ui
+                        .icon_button(
+                            crate::appearance::CHILD_BUTTON_V2.into(),
+                            crate::icons::left(crate::icons::IconSize::Mid),
+                            crate::appearance::FG,
+                        )
+                        .clicked()
+                        && let Ok(id) = core.tree.get_parent(&self.current_task)
+                    {
+                        self.current_task = id;
+                    }
+
+                    ui.add_space(4.0);
+
                     if ui
                         .icon_button(
                             crate::appearance::CHILD_BUTTON_V2.into(),
@@ -350,9 +363,10 @@ impl Tasks {
                     };
 
                     if total_edit.changed() {
-                        self.active_total_drag = Some((total_id, id.clone()));
+                        self.active_total_drag = Some((total_id, self.current_task.clone()));
                         ui.data_mut(|d| d.insert_temp(total_id, display_total));
-                        core.tree.change_node_total_cache(id, display_total);
+                        core.tree
+                            .change_node_total_cache(&self.current_task, display_total);
                     }
                     if total_edit.drag_stopped() || total_edit.lost_focus() {
                         if let Err(err) = core
@@ -382,7 +396,74 @@ impl Tasks {
             });
 
         ui.add(egui::Separator::default().spacing(0.0));
-        Self::parent_task(self, core, ui);
+
+        let name_id = name_edit_id(ui, &self.current_task);
+        let desc_id = desc_edit_id(ui, &self.current_task);
+
+        let mut display_name =
+            ui.data_mut(|d| d.get_temp::<String>(name_id).unwrap_or(node.name.clone()));
+        let mut display_desc =
+            ui.data_mut(|d| d.get_temp::<String>(desc_id).unwrap_or(node.desc.clone()));
+
+        egui::Frame::default()
+            .outer_margin(egui::Margin::symmetric(6, 6))
+            .show(ui, |ui| {
+                ui.vertical(|ui| {
+                    let name_edit = ui.add(
+                        egui::TextEdit::multiline(&mut display_name)
+                            .desired_rows(1)
+                            .desired_width(ui.available_width())
+                            .font(egui::TextStyle::Heading)
+                            .frame(egui::Frame::default())
+                            .hint_text("task name"),
+                    );
+
+                    if name_edit.changed() {
+                        self.active_name_edit = Some((name_id, self.current_task.clone()));
+                        ui.data_mut(|d| d.insert_temp(name_id, display_name.clone()));
+                        core.tree
+                            .change_node_name_cache(&self.current_task, display_name.clone());
+                    }
+
+                    if name_edit.lost_focus() {
+                        if let Err(err) =
+                            core.tree.change_node_name(&self.current_task, display_name)
+                        {
+                            eprintln!("FAILED: To commit name {err:?}");
+                        }
+                        ui.data_mut(|d| d.remove::<String>(name_id));
+                        self.active_name_edit = None;
+                    }
+
+                    ui.add_space(4.0);
+
+                    let desc_edit = ui.add(
+                        egui::TextEdit::multiline(&mut display_desc)
+                            .desired_rows(1)
+                            .desired_width(ui.available_width())
+                            .font(egui::TextStyle::Body)
+                            .frame(egui::Frame::default())
+                            .hint_text("task description"),
+                    );
+
+                    if desc_edit.changed() {
+                        self.active_desc_edit = Some((desc_id, self.current_task.clone()));
+                        ui.data_mut(|d| d.insert_temp(desc_id, display_desc.clone()));
+                        core.tree
+                            .change_node_desc_cache(&self.current_task, display_desc.clone());
+                    }
+
+                    if desc_edit.lost_focus() {
+                        if let Err(err) =
+                            core.tree.change_node_desc(&self.current_task, display_desc)
+                        {
+                            eprintln!("FAILED: To commit desc {err:?}");
+                        }
+                        ui.data_mut(|d| d.remove::<String>(desc_id));
+                        self.active_desc_edit = None;
+                    }
+                });
+            });
     }
 
     #[inline]
