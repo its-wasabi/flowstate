@@ -1,6 +1,6 @@
 // mod tree;
 
-use crate::appearance::{ButtonsExt, ProgressBarExt};
+use crate::extensions::{ButtonsExt, EditExt, ProgressBarExt};
 
 fn name_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
     ui.make_persistent_id(("name_edit", id))
@@ -97,14 +97,7 @@ impl Tasks {
                     .outer_margin(egui::Margin::symmetric(2, 6))
                     .show(ui, |ui| {
                         ui.vertical(|ui| {
-                            let name_edit = ui.add(
-                                egui::TextEdit::multiline(&mut display_name)
-                                    .desired_rows(1)
-                                    .desired_width(ui.available_width())
-                                    .font(egui::TextStyle::Heading)
-                                    .frame(egui::Frame::default())
-                                    .hint_text("task name"),
-                            );
+                            let name_edit = ui.edit_text_multiline(&mut display_name, "task name");
 
                             if name_edit.changed() {
                                 self.active_name_edit = Some((name_id, self.current_task.clone()));
@@ -127,14 +120,8 @@ impl Tasks {
 
                             ui.add_space(4.0);
 
-                            let desc_edit = ui.add(
-                                egui::TextEdit::multiline(&mut display_desc)
-                                    .desired_rows(1)
-                                    .desired_width(ui.available_width())
-                                    .font(egui::TextStyle::Body)
-                                    .frame(egui::Frame::default())
-                                    .hint_text("task description"),
-                            );
+                            let desc_edit =
+                                ui.edit_text_multiline(&mut display_desc, "task description");
 
                             if desc_edit.changed() {
                                 self.active_desc_edit = Some((desc_id, self.current_task.clone()));
@@ -349,18 +336,7 @@ impl Tasks {
 
                     ui.add_space(4.0);
 
-                    let total_edit = {
-                        let v = ui.visuals_mut();
-                        v.widgets.active.fg_stroke.color = crate::appearance::BG;
-
-                        ui.add_sized(
-                            egui::Vec2::new(
-                                crate::appearance::CHILD_BUTTON * 2.0,
-                                ui.available_height(),
-                            ),
-                            egui::DragValue::new(&mut display_total).range(1..=u32::MAX),
-                        )
-                    };
+                    let total_edit = ui.edit_drag_value(&mut display_total);
 
                     if total_edit.changed() {
                         self.active_total_drag = Some((total_id, self.current_task.clone()));
@@ -409,14 +385,7 @@ impl Tasks {
             .outer_margin(egui::Margin::symmetric(6, 6))
             .show(ui, |ui| {
                 ui.vertical(|ui| {
-                    let name_edit = ui.add(
-                        egui::TextEdit::multiline(&mut display_name)
-                            .desired_rows(1)
-                            .desired_width(ui.available_width())
-                            .font(egui::TextStyle::Heading)
-                            .frame(egui::Frame::default())
-                            .hint_text("task name"),
-                    );
+                    let name_edit = ui.edit_text_singleline(&mut display_name, "task name");
 
                     if name_edit.changed() {
                         self.active_name_edit = Some((name_id, self.current_task.clone()));
@@ -437,14 +406,7 @@ impl Tasks {
 
                     ui.add_space(4.0);
 
-                    let desc_edit = ui.add(
-                        egui::TextEdit::multiline(&mut display_desc)
-                            .desired_rows(1)
-                            .desired_width(ui.available_width())
-                            .font(egui::TextStyle::Body)
-                            .frame(egui::Frame::default())
-                            .hint_text("task description"),
-                    );
+                    let desc_edit = ui.edit_text_multiline(&mut display_desc, "task description");
 
                     if desc_edit.changed() {
                         self.active_desc_edit = Some((desc_id, self.current_task.clone()));

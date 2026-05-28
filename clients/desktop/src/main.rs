@@ -1,7 +1,8 @@
-use crate::appearance::ButtonsExt;
+use crate::extensions::ButtonsExt;
 
 mod appearance;
 mod config;
+mod extensions;
 mod icons;
 mod stats;
 mod tasks;
