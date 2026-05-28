@@ -23,7 +23,7 @@ pub const NODE_TASK_TOTAL: &str = "t";
 pub const NODE_TASK_COMPLETED: &str = "c";
 
 pub enum NodeContent {
-    Leaf(node::Node),
+    Leaf((automerge::ObjId, node::Node)),
     Inner(Vec<(automerge::ObjId, node::Node)>),
 }
 
@@ -109,7 +109,10 @@ impl Tree {
             .unwrap_or_default();
 
         if child_ids.is_empty() {
-            Ok(NodeContent::Leaf(node::Node::from_doc(&self.document, id)?))
+            Ok(NodeContent::Leaf((
+                id.clone(),
+                node::Node::from_doc(&self.document, id)?,
+            )))
         } else {
             let mut childrens = Vec::with_capacity(child_ids.len());
 
@@ -213,6 +216,10 @@ impl Tree {
 
     pub fn change_node_desc_cache(&mut self, id: &automerge::ObjId, desc: String) {
         self.projection.update_node_desc(id, desc);
+    }
+
+    pub fn change_node_total_cache(&mut self, id: &automerge::ObjId, total: u32) {
+        self.projection.update_node_total(id, total);
     }
 }
 

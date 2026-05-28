@@ -91,6 +91,14 @@ impl Projection {
             node.desc = desc;
         }
     }
+
+    pub(super) fn update_node_total(&mut self, id: &automerge::ObjId, total: u32) {
+        if let Some(node) = self.nodes.get_mut(id) {
+            let mut progress = node.progress;
+            progress.total = total;
+            node.progress = progress;
+        }
+    }
 }
 
 impl Projection {

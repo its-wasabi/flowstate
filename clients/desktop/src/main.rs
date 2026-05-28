@@ -99,6 +99,13 @@ impl eframe::App for App {
             {
                 eprintln!("FAILED: To commit dangling desc on exit: {err:?}");
             }
+
+            if let Some((egui_id, obj_id)) = self.tasks.active_total_drag.take()
+                && let Some(total) = ctx.data_mut(|d| d.get_temp::<u32>(egui_id))
+                && let Err(err) = self.core.tree.change_node_total(&obj_id, total)
+            {
+                eprintln!("FAILED: To commit dangling desc on exit: {err:?}");
+            }
         }
     }
 

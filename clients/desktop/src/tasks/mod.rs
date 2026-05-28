@@ -19,6 +19,7 @@ pub struct Tasks {
     current_task: automerge::ObjId,
     pub active_name_edit: Option<(egui::Id, automerge::ObjId)>,
     pub active_desc_edit: Option<(egui::Id, automerge::ObjId)>,
+    pub active_total_drag: Option<(egui::Id, automerge::ObjId)>,
     // tree_state: tree::TreeState,
 }
 
@@ -29,6 +30,7 @@ impl Tasks {
 
             active_name_edit: None,
             active_desc_edit: None,
+            active_total_drag: None,
             // tree_state: tree::TreeState::new(),
         }
     }
@@ -184,11 +186,10 @@ impl Tasks {
 
     #[inline]
     fn children(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        // TODO: Maybe make get_children return enum such as enum { Children(Vec<>), Leaf }
         if let Ok(children) = core.tree.get_children(&self.current_task) {
             match children {
-                application::tree::NodeContent::Leaf(node) => {
-                    Self::leaf_control_panel(self, ui, core, &node);
+                application::tree::NodeContent::Leaf((id, node)) => {
+                    Self::leaf_control_panel(self, ui, &id, core, &node);
                 }
                 application::tree::NodeContent::Inner(nodes) => {
                     Self::parent_task(self, core, ui);
@@ -294,6 +295,7 @@ impl Tasks {
     fn leaf_control_panel(
         &mut self,
         ui: &mut egui::Ui,
+        id: &automerge::ObjId,
         core: &mut application::Core,
         node: &application::tree::Node,
     ) {
@@ -348,7 +350,9 @@ impl Tasks {
                     };
 
                     if total_edit.changed() {
+                        self.active_total_drag = Some((total_id, id.clone()));
                         ui.data_mut(|d| d.insert_temp(total_id, display_total));
+                        core.tree.change_node_total_cache(id, display_total);
                     }
                     if total_edit.drag_stopped() || total_edit.lost_focus() {
                         if let Err(err) = core
