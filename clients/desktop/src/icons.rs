@@ -5,85 +5,37 @@ const TEXTURE_OPTIONS: egui::TextureOptions = egui::TextureOptions {
     mipmap_mode: Some(egui::TextureFilter::Nearest),
 };
 
-const BIG: f32 = 24.0;
-const MID: f32 = 18.0;
-const SMALL: f32 = 16.0;
-
-pub enum IconSize {
-    Big,
-    Mid,
-    Small,
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Icon {
+    Add,
+    Delete,
+    DownOpen,
+    DownClose,
+    Down,
+    Left,
+    Right,
+    Minus,
+    Plus,
 }
 
-impl IconSize {
-    const fn size_v2(self) -> egui::Vec2 {
+impl Icon {
+    const fn image_bytes(self) -> egui::ImageSource<'static> {
         match self {
-            Self::Big => egui::Vec2::new(BIG, BIG),
-            Self::Mid => egui::Vec2::new(MID, MID),
-            Self::Small => egui::Vec2::new(SMALL, SMALL),
+            Self::Add => egui::include_image!("../../assets/icons/add.svg"),
+            Self::Delete => egui::include_image!("../../assets/icons/delete.svg"),
+            Self::DownOpen => egui::include_image!("../../assets/icons/down-open.svg"),
+            Self::DownClose => egui::include_image!("../../assets/icons/down-close.svg"),
+            Self::Down => egui::include_image!("../../assets/icons/down.svg"),
+            Self::Left => egui::include_image!("../../assets/icons/left.svg"),
+            Self::Right => egui::include_image!("../../assets/icons/right.svg"),
+            Self::Minus => egui::include_image!("../../assets/icons/minus.svg"),
+            Self::Plus => egui::include_image!("../../assets/icons/plus.svg"),
         }
     }
-}
 
-#[inline]
-pub fn add(size: IconSize) -> egui::Image<'static> {
-    egui::Image::new(egui::include_image!("../../assets/icons/add.svg"))
-        .fit_to_exact_size(size.size_v2())
-        .texture_options(TEXTURE_OPTIONS)
-}
-
-#[inline]
-pub fn delete(size: IconSize) -> egui::Image<'static> {
-    egui::Image::new(egui::include_image!("../../assets/icons/delete.svg"))
-        .fit_to_exact_size(size.size_v2())
-        .texture_options(TEXTURE_OPTIONS)
-}
-
-#[inline]
-pub fn down_open(size: IconSize) -> egui::Image<'static> {
-    egui::Image::new(egui::include_image!("../../assets/icons/down-open.svg"))
-        .fit_to_exact_size(size.size_v2())
-        .texture_options(TEXTURE_OPTIONS)
-}
-
-#[inline]
-pub fn down_close(size: IconSize) -> egui::Image<'static> {
-    egui::Image::new(egui::include_image!("../../assets/icons/down-close.svg"))
-        .fit_to_exact_size(size.size_v2())
-        .texture_options(TEXTURE_OPTIONS)
-}
-
-#[inline]
-pub fn down(size: IconSize) -> egui::Image<'static> {
-    egui::Image::new(egui::include_image!("../../assets/icons/down.svg"))
-        .fit_to_exact_size(size.size_v2())
-        .texture_options(TEXTURE_OPTIONS)
-}
-
-#[inline]
-pub fn left(size: IconSize) -> egui::Image<'static> {
-    egui::Image::new(egui::include_image!("../../assets/icons/left.svg"))
-        .fit_to_exact_size(size.size_v2())
-        .texture_options(TEXTURE_OPTIONS)
-}
-
-#[inline]
-pub fn right(size: IconSize) -> egui::Image<'static> {
-    egui::Image::new(egui::include_image!("../../assets/icons/right.svg"))
-        .fit_to_exact_size(size.size_v2())
-        .texture_options(TEXTURE_OPTIONS)
-}
-
-#[inline]
-pub fn minus(size: IconSize) -> egui::Image<'static> {
-    egui::Image::new(egui::include_image!("../../assets/icons/minus.svg"))
-        .fit_to_exact_size(size.size_v2())
-        .texture_options(TEXTURE_OPTIONS)
-}
-
-#[inline]
-pub fn plus(size: IconSize) -> egui::Image<'static> {
-    egui::Image::new(egui::include_image!("../../assets/icons/plus.svg"))
-        .fit_to_exact_size(size.size_v2())
-        .texture_options(TEXTURE_OPTIONS)
+    pub fn image(self, size: impl Into<egui::Vec2>) -> egui::Image<'static> {
+        egui::Image::new(self.image_bytes())
+            .fit_to_exact_size(size.into())
+            .texture_options(TEXTURE_OPTIONS)
+    }
 }

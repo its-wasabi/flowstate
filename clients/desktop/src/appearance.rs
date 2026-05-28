@@ -3,26 +3,24 @@ use egui::{
     style::{Selection, WidgetVisuals, Widgets},
 };
 
-pub const TOP_BAR_HEIGHT: f32 = 21.0;
-pub const NAV_MIN_WIDTH: f32 = 210.0;
-
-pub const PARENT_BUTTON: f32 = 44.0;
-pub const PARENT_BUTTON_V2: [f32; 2] = [PARENT_BUTTON, PARENT_BUTTON];
-pub const CHILD_BUTTON: f32 = 30.0;
-pub const CHILD_BUTTON_V2: [f32; 2] = [CHILD_BUTTON, CHILD_BUTTON];
+pub const FG: Color32 = Color32::WHITE;
+pub const BG: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 255);
+// TODO: Make that alpha configurable
+pub const ASIDE_BG: Color32 = Color32::from_rgba_premultiplied(20, 20, 20, 160);
+pub const BORDER: Color32 = Color32::from_gray(100);
 
 pub const BORDER_WIDTH: f32 = 1.2;
 
-pub const FG: Color32 = Color32::WHITE;
-pub const BG: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 255);
+pub const TOP_BAR_HEIGHT: f32 = 21.0;
 
-// TODO: Make that alpha configurable
-pub const ASIDE_BG: Color32 = Color32::from_rgba_premultiplied(20, 20, 20, 160);
+pub const BUTTON_SMALL: f32 = 16.0;
+pub const BUTTON_SMALL_V2: [f32; 2] = [BUTTON_SMALL, BUTTON_SMALL];
 
-pub const BORDER: Color32 = Color32::from_gray(100);
+pub const BUTTON_MID: f32 = 30.0;
+pub const BUTTON_MID_V2: [f32; 2] = [BUTTON_MID, BUTTON_MID];
 
-pub const ACTIVE: Color32 = Color32::from_gray(255);
-pub const HOVER: Color32 = Color32::from_gray(80);
+pub const BUTTON_BIG: f32 = 44.0;
+pub const BUTTON_BIG_V2: [f32; 2] = [BUTTON_BIG, BUTTON_BIG];
 
 pub fn apply(cc: &eframe::CreationContext) {
     let mut v = Visuals::dark();
@@ -56,9 +54,9 @@ pub fn apply(cc: &eframe::CreationContext) {
             expansion: 0.0,
         },
         inactive: flat(Color32::from_gray(140), BG, FG, BORDER),
-        hovered: flat(Color32::from_gray(180), HOVER, FG, BORDER),
-        active: flat(ACTIVE, ACTIVE, ACTIVE, BORDER),
-        open: flat(ACTIVE, ACTIVE, ACTIVE, ACTIVE),
+        hovered: flat(Color32::from_gray(180), BORDER, FG, BORDER),
+        active: flat(FG, FG, FG, BORDER),
+        open: flat(FG, FG, FG, FG),
     };
 
     cc.egui_ctx.set_visuals(v);
