@@ -1,4 +1,4 @@
-use crate::extensions::ButtonsExt;
+use crate::extensions::IconButtonExt;
 
 mod appearance;
 mod config;
@@ -61,7 +61,7 @@ impl App {
                 ] {
                     strip.cell(|ui| {
                         if ui
-                            .selectable_button_borderless(
+                            .selectable_icon_button_borderless(
                                 ui.available_size(),
                                 egui::Color32::WHITE,
                                 self.current_tab == target,

@@ -1,6 +1,6 @@
 // mod tree;
 
-use crate::extensions::{ButtonsExt, EditExt, ProgressBarExt};
+use crate::extensions::{EditExt, IconButtonExt, ProgressBarExt};
 
 fn name_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
     ui.make_persistent_id(("name_edit", id))
@@ -209,7 +209,7 @@ impl Tasks {
             .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
             .show(ui, |ui| {
                 ui.vertical(|ui| {
-                    ui.frame_progress_bar(node.progress.procentage());
+                    ui.progress_bar(node.progress.procentage());
 
                     egui::Frame::default()
                         .inner_margin(egui::Margin::same(4))

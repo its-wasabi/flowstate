@@ -1,14 +1,6 @@
-use egui::{Color32, Image, Response, Ui, Vec2, text_selection::visuals};
+use egui::{Color32, Image, Response, Ui, Vec2};
 
-pub trait ButtonsExt {
-    fn selectable_button_borderless(
-        &mut self,
-        size: Vec2,
-        color: Color32,
-        selected: bool,
-        label: &str,
-    ) -> Response;
-
+pub trait IconButtonExt {
     fn icon_button(&mut self, size: Vec2, image: Image<'static>, color: Color32) -> Response;
 
     fn icon_button_borderless(
@@ -17,43 +9,17 @@ pub trait ButtonsExt {
         image: Image<'static>,
         color: Color32,
     ) -> Response;
-}
 
-impl ButtonsExt for Ui {
-    fn selectable_button_borderless(
+    fn selectable_icon_button_borderless(
         &mut self,
         size: Vec2,
         color: Color32,
         selected: bool,
         label: &str,
-    ) -> Response {
-        self.scope(|ui| {
-            let hover_bg = color.gamma_multiply(0.32);
-            let active_bg = color.gamma_multiply(0.40);
-            let visuals = ui.visuals_mut();
+    ) -> Response;
+}
 
-            visuals.widgets.inactive.bg_fill = Color32::TRANSPARENT;
-            visuals.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
-            visuals.widgets.inactive.fg_stroke.color = color;
-
-            visuals.widgets.hovered.bg_fill = hover_bg;
-            visuals.widgets.hovered.weak_bg_fill = hover_bg;
-            visuals.widgets.hovered.fg_stroke.color = color;
-
-            visuals.widgets.active.bg_fill = active_bg;
-            visuals.widgets.active.weak_bg_fill = color;
-            visuals.widgets.active.fg_stroke.color = Color32::BLACK;
-            visuals.widgets.active.bg_stroke.color = color;
-
-            ui.add_sized(
-                size,
-                egui::Button::selectable(selected, label)
-                    .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT)),
-            )
-        })
-        .inner
-    }
-
+impl IconButtonExt for Ui {
     fn icon_button(&mut self, size: Vec2, image: Image<'static>, color: Color32) -> Response {
         self.scope(|ui| {
             let hover_bg = color.gamma_multiply(0.32);
@@ -114,11 +80,45 @@ impl ButtonsExt for Ui {
         })
         .inner
     }
+
+    fn selectable_icon_button_borderless(
+        &mut self,
+        size: Vec2,
+        color: Color32,
+        selected: bool,
+        label: &str,
+    ) -> Response {
+        self.scope(|ui| {
+            let hover_bg = color.gamma_multiply(0.32);
+            let active_bg = color.gamma_multiply(0.40);
+            let visuals = ui.visuals_mut();
+
+            visuals.widgets.inactive.bg_fill = Color32::TRANSPARENT;
+            visuals.widgets.inactive.weak_bg_fill = Color32::TRANSPARENT;
+            visuals.widgets.inactive.fg_stroke.color = color;
+
+            visuals.widgets.hovered.bg_fill = hover_bg;
+            visuals.widgets.hovered.weak_bg_fill = hover_bg;
+            visuals.widgets.hovered.fg_stroke.color = color;
+
+            visuals.widgets.active.bg_fill = active_bg;
+            visuals.widgets.active.weak_bg_fill = color;
+            visuals.widgets.active.fg_stroke.color = Color32::BLACK;
+            visuals.widgets.active.bg_stroke.color = color;
+
+            ui.add_sized(
+                size,
+                egui::Button::selectable(selected, label)
+                    .stroke(egui::Stroke::new(0.0, egui::Color32::TRANSPARENT)),
+            )
+        })
+        .inner
+    }
 }
 
 pub trait ProgressBarExt {
     fn top_progress_bar(&mut self, id: &'static str, progress: f32) -> Response;
-    fn frame_progress_bar(&mut self, progress: f32) -> Response;
+    fn progress_bar(&mut self, progress: f32) -> Response;
 }
 
 impl ProgressBarExt for Ui {
@@ -141,7 +141,7 @@ impl ProgressBarExt for Ui {
             .response
     }
 
-    fn frame_progress_bar(&mut self, progress: f32) -> Response {
+    fn progress_bar(&mut self, progress: f32) -> Response {
         let response = self.add(
             egui::ProgressBar::new(progress / 100.0)
                 .corner_radius(0)
