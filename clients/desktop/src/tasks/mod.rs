@@ -81,10 +81,12 @@ impl Tasks {
                     .outer_margin(egui::Margin::same(4))
                     .show(ui, |ui| {
                         if ui
-                            .icon_button(
-                                crate::appearance::PARENT_BUTTON_V2.into(),
-                                crate::icons::left(crate::icons::IconSize::Big),
-                                egui::Color32::WHITE,
+                            .add_sized(
+                                crate::appearance::BUTTON_BIG_V2,
+                                crate::extensions::IconButton::new(
+                                    crate::appearance::FG,
+                                    crate::icons::Icon::Left,
+                                ),
                             )
                             .clicked()
                             && let Ok(id) = core.tree.get_parent(&self.current_task)
@@ -151,14 +153,16 @@ impl Tasks {
     fn add_button(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
         egui::Panel::bottom("add_button")
             .frame(egui::Frame::default())
-            .exact_size(crate::appearance::CHILD_BUTTON)
+            .exact_size(crate::appearance::BUTTON_MID)
             .resizable(false)
             .show_inside(ui, |ui| {
                 if ui
-                    .icon_button_borderless(
+                    .add_sized(
                         egui::Vec2::new(ui.available_width(), ui.available_height()),
-                        crate::icons::add(crate::icons::IconSize::Mid),
-                        egui::Color32::WHITE,
+                        crate::extensions::IconButtonBorderless::new(
+                            egui::Color32::WHITE,
+                            crate::icons::Icon::Add,
+                        ),
                     )
                     .clicked()
                     && let Ok(new_node) = core.tree.append_child(
@@ -297,10 +301,12 @@ impl Tasks {
             .show(ui, |ui| {
                 ui.horizontal(|ui| {
                     if ui
-                        .icon_button(
-                            crate::appearance::CHILD_BUTTON_V2.into(),
-                            crate::icons::left(crate::icons::IconSize::Mid),
-                            crate::appearance::FG,
+                        .add_sized(
+                            crate::appearance::BUTTON_MID_V2,
+                            crate::extensions::IconButton::new(
+                                crate::appearance::FG,
+                                crate::icons::Icon::Left,
+                            ),
                         )
                         .clicked()
                         && let Ok(id) = core.tree.get_parent(&self.current_task)
@@ -311,10 +317,12 @@ impl Tasks {
                     ui.add_space(4.0);
 
                     if ui
-                        .icon_button(
-                            crate::appearance::CHILD_BUTTON_V2.into(),
-                            crate::icons::minus(crate::icons::IconSize::Mid),
-                            egui::Color32::YELLOW,
+                        .add_sized(
+                            crate::appearance::BUTTON_MID_V2,
+                            crate::extensions::IconButton::new(
+                                egui::Color32::YELLOW,
+                                crate::icons::Icon::Minus,
+                            ),
                         )
                         .clicked()
                         && let Err(err) = core.tree.change_node_completed(&self.current_task, -1)
@@ -323,10 +331,12 @@ impl Tasks {
                     }
 
                     if ui
-                        .icon_button(
-                            crate::appearance::CHILD_BUTTON_V2.into(),
-                            crate::icons::plus(crate::icons::IconSize::Mid),
-                            egui::Color32::GREEN,
+                        .add_sized(
+                            crate::appearance::BUTTON_MID_V2,
+                            crate::extensions::IconButton::new(
+                                egui::Color32::GREEN,
+                                crate::icons::Icon::Plus,
+                            ),
                         )
                         .clicked()
                         && let Err(err) = core.tree.change_node_completed(&self.current_task, 1)
@@ -357,10 +367,12 @@ impl Tasks {
 
                     ui.add_space(4.0);
 
-                    let delete = ui.icon_button(
-                        crate::appearance::CHILD_BUTTON_V2.into(),
-                        crate::icons::delete(crate::icons::IconSize::Mid),
-                        egui::Color32::RED,
+                    let delete = ui.add_sized(
+                        crate::appearance::BUTTON_MID_V2,
+                        crate::extensions::IconButton::new(
+                            egui::Color32::RED,
+                            crate::icons::Icon::Delete,
+                        ),
                     );
 
                     if delete.clicked()
@@ -435,19 +447,17 @@ impl Tasks {
         core: &mut application::Core,
         child_id: &automerge::ObjId,
     ) {
-        let right = ui.icon_button(
-            crate::appearance::CHILD_BUTTON_V2.into(),
-            crate::icons::right(crate::icons::IconSize::Mid),
-            egui::Color32::WHITE,
+        let right = ui.add_sized(
+            crate::appearance::BUTTON_MID_V2,
+            crate::extensions::IconButton::new(egui::Color32::WHITE, crate::icons::Icon::Right),
         );
 
         ui.add_space(4.0);
 
-        let delete = ui.icon_button(
-            crate::appearance::CHILD_BUTTON_V2.into(),
-            crate::icons::delete(crate::icons::IconSize::Mid),
+        let delete = ui.add(crate::extensions::IconButton::new(
             egui::Color32::RED,
-        );
+            crate::icons::Icon::Delete,
+        ));
 
         if core.tree.is_leaf(child_id).unwrap_or(false) {
             ui.add_space(4.0);
@@ -472,10 +482,9 @@ impl Tasks {
         child_id: &automerge::ObjId,
     ) {
         if ui
-            .icon_button(
-                crate::appearance::CHILD_BUTTON_V2.into(),
-                crate::icons::plus(crate::icons::IconSize::Mid),
-                egui::Color32::GREEN,
+            .add_sized(
+                crate::appearance::BUTTON_MID_V2,
+                crate::extensions::IconButton::new(egui::Color32::GREEN, crate::icons::Icon::Plus),
             )
             .clicked()
             && let Err(err) = core.tree.change_node_completed(child_id, 1)
@@ -484,10 +493,12 @@ impl Tasks {
         }
 
         if ui
-            .icon_button(
-                crate::appearance::CHILD_BUTTON_V2.into(),
-                crate::icons::minus(crate::icons::IconSize::Mid),
-                egui::Color32::YELLOW,
+            .add_sized(
+                crate::appearance::BUTTON_MID_V2,
+                crate::extensions::IconButton::new(
+                    egui::Color32::YELLOW,
+                    crate::icons::Icon::Minus,
+                ),
             )
             .clicked()
             && let Err(err) = core.tree.change_node_completed(child_id, -1)

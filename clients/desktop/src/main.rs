@@ -64,8 +64,8 @@ impl App {
                             .selectable_icon_button_borderless(
                                 ui.available_size(),
                                 egui::Color32::WHITE,
-                                self.current_tab == target,
                                 label,
+                                self.current_tab == target,
                             )
                             .clicked()
                         {
@@ -113,7 +113,7 @@ impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         egui::Panel::left("aside")
             .frame(egui::Frame::default().fill(appearance::ASIDE_BG))
-            .min_size(appearance::NAV_MIN_WIDTH)
+            .min_size((ui.available_width() / 6.0).min(200.0))
             .max_size(ui.available_width() / 1.3)
             .show_inside(ui, |ui| {
                 egui::Panel::top("tabs")

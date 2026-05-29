@@ -3,17 +3,19 @@ pub const BG: egui::Color32 = egui::Color32::from_rgba_premultiplied(0, 0, 0, 25
 pub const ASIDE_BG: egui::Color32 = egui::Color32::from_rgba_premultiplied(20, 20, 20, 160);
 pub const BORDER: egui::Color32 = egui::Color32::from_gray(100);
 
+pub const TOP_BAR_HEIGHT: f32 = 21.0;
+
 pub const BORDER_WIDTH: f32 = 1.2;
 
-pub const TOP_BAR_HEIGHT: f32 = 21.0;
+pub const BUTTON_ICON_MARGIN: f32 = 8.0;
 
 pub const BUTTON_SMALL: f32 = 16.0;
 pub const BUTTON_SMALL_V2: [f32; 2] = [BUTTON_SMALL, BUTTON_SMALL];
 
-pub const BUTTON_MID: f32 = 30.0;
+pub const BUTTON_MID: f32 = 26.0;
 pub const BUTTON_MID_V2: [f32; 2] = [BUTTON_MID, BUTTON_MID];
 
-pub const BUTTON_BIG: f32 = 44.0;
+pub const BUTTON_BIG: f32 = 40.0;
 pub const BUTTON_BIG_V2: [f32; 2] = [BUTTON_BIG, BUTTON_BIG];
 
 pub fn apply(cc: &eframe::CreationContext) {
