@@ -9,6 +9,7 @@ impl Progress {
     /// Panics if completed is bigger than total
     #[must_use]
     pub const fn new(completed: u32, total: u32) -> Self {
+        // TODO: Think about dropping the assertion here
         assert!(
             completed <= total,
             "Completed should never be bigger than total"

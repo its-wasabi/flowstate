@@ -15,7 +15,7 @@ pub const BUTTON_SMALL_V2: [f32; 2] = [BUTTON_SMALL, BUTTON_SMALL];
 pub const BUTTON_MID: f32 = 26.0;
 pub const BUTTON_MID_V2: [f32; 2] = [BUTTON_MID, BUTTON_MID];
 
-pub const BUTTON_BIG: f32 = 40.0;
+pub const BUTTON_BIG: f32 = 46.0;
 pub const BUTTON_BIG_V2: [f32; 2] = [BUTTON_BIG, BUTTON_BIG];
 
 pub fn apply(cc: &eframe::CreationContext) {

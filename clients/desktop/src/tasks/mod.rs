@@ -9,7 +9,7 @@ fn desc_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
 }
 
 fn total_drag_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
-    ui.make_persistent_id(("total_drag", id))
+    ui.make_persistent_id(("total_edit", id))
 }
 
 #[derive(Debug)]
@@ -125,8 +125,9 @@ impl Tasks {
                     .outer_margin(egui::Margin::symmetric(2, 6))
                     .show(ui, |ui| {
                         ui.vertical(|ui| {
-                            let name_edit = ui.add(crate::components::TextEditSingleLine::new(
+                            let name_edit = ui.add(crate::components::TextEditMultiLine::new(
                                 "task name",
+                                egui::TextStyle::Heading,
                                 &mut display_name,
                             ));
 
@@ -153,6 +154,7 @@ impl Tasks {
 
                             let desc_edit = ui.add(crate::components::TextEditSingleLine::new(
                                 "task description",
+                                egui::TextStyle::Button,
                                 &mut display_desc,
                             ));
 
@@ -268,6 +270,7 @@ impl Tasks {
                 .show(ui, |ui| {
                     let name_edit = ui.add(crate::components::TextEditSingleLine::new(
                         "task name",
+                        egui::TextStyle::Button,
                         &mut display_name,
                     ));
 
@@ -411,6 +414,7 @@ impl Tasks {
                 ui.vertical(|ui| {
                     let name_edit = ui.add(crate::components::TextEditMultiLine::new(
                         "task name",
+                        egui::TextStyle::Heading,
                         &mut display_name,
                     ));
 
@@ -435,6 +439,7 @@ impl Tasks {
 
                     let desc_edit = ui.add(crate::components::TextEditMultiLine::new(
                         "task description",
+                        egui::TextStyle::Button,
                         &mut display_desc,
                     ));
 
