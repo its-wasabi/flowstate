@@ -1,7 +1,5 @@
 // mod tree;
 
-use crate::extensions::{EditExt, IconButtonExt, ProgressBarExt};
-
 fn name_edit_id(ui: &egui::Ui, id: &automerge::ObjId) -> egui::Id {
     ui.make_persistent_id(("name_edit", id))
 }
@@ -38,18 +36,13 @@ impl Tasks {
 
 impl super::View for Tasks {
     fn main(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        #[cfg(debug_assertions)]
-        {
-            ui.ctx().set_debug_on_hover(true);
-        }
-
-        Self::parent_progress(self, core, ui);
+        Self::top_bar_progress(self, core, ui);
         Self::add_button(self, ui, core);
 
         Self::children(self, ui, core);
     }
 
-    fn aside(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
+    fn aside(&mut self, ui: &mut egui::Ui, _core: &mut application::Core) {
         // self.tree_state.show(ui, &core.tree, &mut self.current_task);
         ui.centered_and_justified(|ui| ui.heading("(TODO)"));
     }
@@ -57,12 +50,45 @@ impl super::View for Tasks {
 
 impl Tasks {
     #[inline]
-    fn parent_progress(&self, core: &application::Core, ui: &mut egui::Ui) {
+    fn top_bar_progress(&self, core: &application::Core, ui: &mut egui::Ui) {
         if let Ok(progress) = core.tree.get_progress(&self.current_task) {
-            ui.top_progress_bar("parent_task_progressbar", progress.procentage());
+            egui::Panel::top("CHANGE ME")
+                .frame(egui::Frame::default())
+                .exact_size(crate::appearance::TOP_BAR_HEIGHT)
+                .show_inside(ui, |ui| {
+                    ui.add(crate::components::TopProgressBar::new(
+                        progress.procentage(),
+                    ));
+                });
         } else {
             eprintln!("FAILED TO DISPLAY TOP BAR");
         }
+    }
+
+    #[inline]
+    fn add_button(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
+        egui::Panel::bottom("add_button")
+            .frame(egui::Frame::default())
+            .exact_size(crate::appearance::BUTTON_MID)
+            .resizable(false)
+            .show_inside(ui, |ui| {
+                if ui
+                    .add_sized(
+                        egui::Vec2::new(ui.available_width(), ui.available_height()),
+                        crate::components::IconButtonBorderless::new(
+                            egui::Color32::WHITE,
+                            crate::icons::Icon::Add,
+                        ),
+                    )
+                    .clicked()
+                    && let Ok(new_node) = core.tree.append_child(
+                        &self.current_task,
+                        &application::tree::node::Node::default(),
+                    )
+                {
+                    self.current_task = new_node;
+                }
+            });
     }
 
     #[inline]
@@ -83,7 +109,7 @@ impl Tasks {
                         if ui
                             .add_sized(
                                 crate::appearance::BUTTON_BIG_V2,
-                                crate::extensions::IconButton::new(
+                                crate::components::IconButton::new(
                                     crate::appearance::FG,
                                     crate::icons::Icon::Left,
                                 ),
@@ -99,7 +125,10 @@ impl Tasks {
                     .outer_margin(egui::Margin::symmetric(2, 6))
                     .show(ui, |ui| {
                         ui.vertical(|ui| {
-                            let name_edit = ui.edit_text_multiline(&mut display_name, "task name");
+                            let name_edit = ui.add(crate::components::TextEditSingleLine::new(
+                                "task name",
+                                &mut display_name,
+                            ));
 
                             if name_edit.changed() {
                                 self.active_name_edit = Some((name_id, self.current_task.clone()));
@@ -122,8 +151,10 @@ impl Tasks {
 
                             ui.add_space(4.0);
 
-                            let desc_edit =
-                                ui.edit_text_multiline(&mut display_desc, "task description");
+                            let desc_edit = ui.add(crate::components::TextEditSingleLine::new(
+                                "task description",
+                                &mut display_desc,
+                            ));
 
                             if desc_edit.changed() {
                                 self.active_desc_edit = Some((desc_id, self.current_task.clone()));
@@ -147,32 +178,6 @@ impl Tasks {
                     });
             });
         }
-    }
-
-    #[inline]
-    fn add_button(&mut self, ui: &mut egui::Ui, core: &mut application::Core) {
-        egui::Panel::bottom("add_button")
-            .frame(egui::Frame::default())
-            .exact_size(crate::appearance::BUTTON_MID)
-            .resizable(false)
-            .show_inside(ui, |ui| {
-                if ui
-                    .add_sized(
-                        egui::Vec2::new(ui.available_width(), ui.available_height()),
-                        crate::extensions::IconButtonBorderless::new(
-                            egui::Color32::WHITE,
-                            crate::icons::Icon::Add,
-                        ),
-                    )
-                    .clicked()
-                    && let Ok(new_node) = core.tree.append_child(
-                        &self.current_task,
-                        &application::tree::node::Node::default(),
-                    )
-                {
-                    self.current_task = new_node;
-                }
-            });
     }
 
     #[inline]
@@ -213,7 +218,12 @@ impl Tasks {
             .stroke(ui.visuals().widgets.noninteractive.bg_stroke)
             .show(ui, |ui| {
                 ui.vertical(|ui| {
-                    ui.progress_bar(node.progress.procentage());
+                    ui.add_sized(
+                        egui::Vec2::new(ui.available_width(), 18.0),
+                        crate::components::TopProgressBar::new(node.progress.procentage()),
+                    );
+
+                    ui.add(egui::Separator::default().spacing(0.0));
 
                     egui::Frame::default()
                         .inner_margin(egui::Margin::same(4))
@@ -256,14 +266,10 @@ impl Tasks {
                 .auto_shrink([false, true])
                 .content_margin(egui::Margin::symmetric(6, 0))
                 .show(ui, |ui| {
-                    let name_edit = ui.add(
-                        egui::TextEdit::singleline(&mut display_name)
-                            .clip_text(false)
-                            .desired_width(ui.available_width())
-                            .font(egui::TextStyle::Button)
-                            .frame(egui::Frame::default())
-                            .hint_text("task name"),
-                    );
+                    let name_edit = ui.add(crate::components::TextEditSingleLine::new(
+                        "task name",
+                        &mut display_name,
+                    ));
 
                     if name_edit.changed() {
                         self.active_name_edit = Some((name_id, id.clone()));
@@ -303,7 +309,7 @@ impl Tasks {
                     if ui
                         .add_sized(
                             crate::appearance::BUTTON_MID_V2,
-                            crate::extensions::IconButton::new(
+                            crate::components::IconButton::new(
                                 crate::appearance::FG,
                                 crate::icons::Icon::Left,
                             ),
@@ -319,7 +325,7 @@ impl Tasks {
                     if ui
                         .add_sized(
                             crate::appearance::BUTTON_MID_V2,
-                            crate::extensions::IconButton::new(
+                            crate::components::IconButton::new(
                                 egui::Color32::YELLOW,
                                 crate::icons::Icon::Minus,
                             ),
@@ -333,7 +339,7 @@ impl Tasks {
                     if ui
                         .add_sized(
                             crate::appearance::BUTTON_MID_V2,
-                            crate::extensions::IconButton::new(
+                            crate::components::IconButton::new(
                                 egui::Color32::GREEN,
                                 crate::icons::Icon::Plus,
                             ),
@@ -346,7 +352,13 @@ impl Tasks {
 
                     ui.add_space(4.0);
 
-                    let total_edit = ui.edit_drag_value(&mut display_total);
+                    let total_edit = ui.add_sized(
+                        egui::Vec2::new(ui.available_height() * 2.0, ui.available_height()),
+                        crate::components::DragValueEdit::new(
+                            crate::appearance::FG,
+                            &mut display_total,
+                        ),
+                    );
 
                     if total_edit.changed() {
                         self.active_total_drag = Some((total_id, self.current_task.clone()));
@@ -369,7 +381,7 @@ impl Tasks {
 
                     let delete = ui.add_sized(
                         crate::appearance::BUTTON_MID_V2,
-                        crate::extensions::IconButton::new(
+                        crate::components::IconButton::new(
                             egui::Color32::RED,
                             crate::icons::Icon::Delete,
                         ),
@@ -397,7 +409,10 @@ impl Tasks {
             .outer_margin(egui::Margin::symmetric(6, 6))
             .show(ui, |ui| {
                 ui.vertical(|ui| {
-                    let name_edit = ui.edit_text_singleline(&mut display_name, "task name");
+                    let name_edit = ui.add(crate::components::TextEditMultiLine::new(
+                        "task name",
+                        &mut display_name,
+                    ));
 
                     if name_edit.changed() {
                         self.active_name_edit = Some((name_id, self.current_task.clone()));
@@ -418,7 +433,10 @@ impl Tasks {
 
                     ui.add_space(4.0);
 
-                    let desc_edit = ui.edit_text_multiline(&mut display_desc, "task description");
+                    let desc_edit = ui.add(crate::components::TextEditMultiLine::new(
+                        "task description",
+                        &mut display_desc,
+                    ));
 
                     if desc_edit.changed() {
                         self.active_desc_edit = Some((desc_id, self.current_task.clone()));
@@ -449,12 +467,12 @@ impl Tasks {
     ) {
         let right = ui.add_sized(
             crate::appearance::BUTTON_MID_V2,
-            crate::extensions::IconButton::new(egui::Color32::WHITE, crate::icons::Icon::Right),
+            crate::components::IconButton::new(egui::Color32::WHITE, crate::icons::Icon::Right),
         );
 
         ui.add_space(4.0);
 
-        let delete = ui.add(crate::extensions::IconButton::new(
+        let delete = ui.add(crate::components::IconButton::new(
             egui::Color32::RED,
             crate::icons::Icon::Delete,
         ));
@@ -484,7 +502,7 @@ impl Tasks {
         if ui
             .add_sized(
                 crate::appearance::BUTTON_MID_V2,
-                crate::extensions::IconButton::new(egui::Color32::GREEN, crate::icons::Icon::Plus),
+                crate::components::IconButton::new(egui::Color32::GREEN, crate::icons::Icon::Plus),
             )
             .clicked()
             && let Err(err) = core.tree.change_node_completed(child_id, 1)
@@ -495,7 +513,7 @@ impl Tasks {
         if ui
             .add_sized(
                 crate::appearance::BUTTON_MID_V2,
-                crate::extensions::IconButton::new(
+                crate::components::IconButton::new(
                     egui::Color32::YELLOW,
                     crate::icons::Icon::Minus,
                 ),

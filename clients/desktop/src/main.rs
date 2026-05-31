@@ -1,8 +1,6 @@
-use crate::extensions::IconButtonExt;
-
 mod appearance;
+mod components;
 mod config;
-mod extensions;
 mod icons;
 mod stats;
 mod tasks;
@@ -61,12 +59,11 @@ impl App {
                 ] {
                     strip.cell(|ui| {
                         if ui
-                            .selectable_icon_button_borderless(
-                                ui.available_size(),
+                            .add(crate::components::SelectableLabelButtonBorderless::new(
                                 egui::Color32::WHITE,
                                 label,
                                 self.current_tab == target,
-                            )
+                            ))
                             .clicked()
                         {
                             self.current_tab = target;
