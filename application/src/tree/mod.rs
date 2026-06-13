@@ -70,7 +70,7 @@ impl Default for Tree {
 }
 
 impl Tree {
-    pub fn sync_check(&mut self) -> error::Result<()> {
+    pub fn sync(&mut self) -> error::Result<()> {
         let current_heads = self.document.get_heads();
         if self.projection.changes != current_heads {
             let patches = self.document.diff(&self.projection.changes, &current_heads);
@@ -159,12 +159,7 @@ impl Tree {
         let new_node_id = tx.insert_object(&list_id, list_len, automerge::ObjType::Map)?;
         node.apply_data(&mut tx, &new_node_id)?;
         tx.commit();
-
-        self.projection.update_up_from(
-            new_node_id.clone(),
-            Some(parent_id.clone()),
-            &self.document,
-        );
+        self.sync();
 
         Ok(new_node_id)
     }
@@ -180,10 +175,7 @@ impl Tree {
         let mut tx = self.document.transaction();
         tx.delete(&parent_list.obj, parent_list.prop)?;
         tx.commit();
-
-        self.projection.purge_recursive(id);
-        self.projection
-            .update_up_from(parent_id, None, &self.document);
+        self.sync();
 
         Ok(())
     }
@@ -194,8 +186,7 @@ impl Tree {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_NAME, name)?;
         tx.commit();
-
-        self.projection.update_node(id.clone(), &self.document)?;
+        self.sync();
 
         Ok(())
     }
@@ -208,8 +199,7 @@ impl Tree {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_DESC, desc)?;
         tx.commit();
-
-        self.projection.update_node(id.clone(), &self.document)?;
+        self.sync();
 
         Ok(())
     }
@@ -228,8 +218,7 @@ impl Tree {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_TASK_TOTAL, total)?;
         tx.commit();
-
-        self.projection.update_node(id.clone(), &self.document)?;
+        self.sync();
 
         Ok(())
     }
@@ -274,9 +263,7 @@ impl Tree {
             let mut tx = self.document.transaction();
             tx.increment(id, NODE_TASK_COMPLETED, safe_delta)?;
             tx.commit();
-
-            self.projection
-                .update_up_from(id.clone(), None, &self.document);
+            self.sync();
         }
 
         Ok(())

@@ -35,6 +35,130 @@ impl Projection {
 }
 
 impl Projection {
+    fn node_name_mut(&mut self) -> Result<&mut String, super::error::TreeError> {
+        Ok(&mut self
+            .nodes
+            .get_mut(&automerge::ObjId::Root)
+            .ok_or(super::error::TreeError::MissingProperty)?
+            .name)
+    }
+}
+
+impl Projection {
+    pub(super) fn change_node(
+        &mut self,
+        id: automerge::ObjId,
+        document: &automerge::Automerge,
+    ) -> super::error::Result<()> {
+        let node = super::node::Node::from_doc(document, &id)?;
+        self.nodes.entry(id).and_modify(|stored_node| {
+            stored_node.name = node.name;
+            stored_node.desc = node.desc;
+        });
+        Ok(())
+    }
+
+    pub(super) fn apply_patches(
+        &mut self,
+        document: &automerge::Automerge,
+        patches: Vec<automerge::Patch>,
+    ) {
+        use automerge::patches::PatchAction;
+        let mut paths_to_recompute = FxHashSet::default();
+
+        for patch in patches {
+            match patch.action {
+                // Node properties changed (name, desc, totals)
+                PatchAction::PutMap { .. } | PatchAction::Increment { .. } => {
+                    paths_to_recompute.insert(patch.obj);
+                }
+
+                // The CHILDREN list structure changed
+                PatchAction::Insert { .. }
+                | PatchAction::PutSeq { .. }
+                | PatchAction::DeleteSeq { .. } => {
+                    if let Ok(mut parents) = document.parents(&patch.obj) {
+                        if let Some(parent_info) = parents.next() {
+                            let parent_id = parent_info.obj;
+
+                            // 1. Fetch current live children from the document
+                            let mut new_child_ids = Vec::new();
+                            let list_len = document.length(&patch.obj);
+                            for idx in 0..list_len {
+                                if let Ok(Some((_, child_id))) = document.get(&patch.obj, idx) {
+                                    new_child_ids.push(child_id.clone());
+                                }
+                            }
+
+                            // 2. Identify and purge deleted nodes
+                            if let Some(old_child_ids) = self.children.get(&parent_id).cloned() {
+                                // <-- Add .cloned() here
+                                for old_id in &old_child_ids {
+                                    // <-- Iterate by reference over the cloned Vec
+                                    if !new_child_ids.contains(old_id) {
+                                        self.purge_recursive(old_id); // Now self is free to be borrowed mutably!
+                                    }
+                                }
+                            }
+
+                            // 3. Rebuild map relationships
+                            for new_id in &new_child_ids {
+                                self.parent.insert(new_id.clone(), parent_id.clone());
+                            }
+                            self.children.insert(parent_id.clone(), new_child_ids);
+
+                            // 4. Mark parent so its progress updates based on new children
+                            paths_to_recompute.insert(parent_id);
+                        }
+                    }
+                }
+
+                // Complete node removed (often handled via parent list, but acts as a fallback)
+                PatchAction::DeleteMap { .. } => {
+                    self.purge_recursive(&patch.obj);
+                }
+                _ => {}
+            }
+        }
+
+        // Re-parse marked nodes and bubble up their progress calculations
+        for id in paths_to_recompute {
+            if id != automerge::ObjId::Root {
+                if let Ok(mut node_data) = super::node::Node::from_doc(document, &id) {
+                    // Retain existing progress until recalculated to prevent flicker
+                    if let Some(existing) = self.nodes.get(&id) {
+                        node_data.progress = existing.progress;
+                    }
+                    self.nodes.insert(id.clone(), node_data);
+                }
+            }
+
+            // Walk up the tree to recalculate branch progress
+            let mut current_id = id;
+            loop {
+                let progress = self.calculate_progress(document, &current_id);
+
+                if current_id == automerge::ObjId::Root {
+                    self.root_progress = progress;
+                    break;
+                } else if let Some(node) = self.nodes.get_mut(&current_id) {
+                    node.progress = progress;
+                }
+
+                if let Some(parent_id) = self.parent.get(&current_id).cloned() {
+                    current_id = parent_id;
+                } else {
+                    break;
+                }
+            }
+        }
+
+        // Finalize the state sync
+        self.changes = document.get_heads();
+    }
+}
+
+impl Projection {
     fn rebuild(&mut self, document: &automerge::Automerge) -> super::error::Result<()> {
         self.clear();
         self.build_recursive(document, &automerge::ObjId::Root)?;
@@ -102,77 +226,6 @@ impl Projection {
 }
 
 impl Projection {
-    pub(super) fn update_node(
-        &mut self,
-        id: automerge::ObjId,
-        document: &automerge::Automerge,
-    ) -> super::error::Result<()> {
-        let node = super::node::Node::from_doc(document, &id)?;
-        self.nodes.entry(id).and_modify(|stored_node| {
-            stored_node.name = node.name;
-            stored_node.desc = node.desc;
-        });
-        Ok(())
-    }
-
-    pub(super) fn update_up_from(
-        &mut self,
-        mut id: automerge::ObjId,
-        parent_id: Option<automerge::ObjId>,
-        document: &automerge::Automerge,
-    ) {
-        if let Some(parent_id) = parent_id {
-            self.parent.insert(id.clone(), parent_id.clone());
-            self.children.entry(parent_id).or_default().push(id.clone());
-        }
-
-        let progress = self.calculate_progress(document, &id);
-
-        if id == automerge::ObjId::Root {
-            self.root_progress = progress;
-        } else if let Some(node) = self.nodes.get_mut(&id) {
-            node.progress = progress;
-        } else if let Ok(mut new_node) = super::node::Node::from_doc(document, &id) {
-            new_node.progress = progress;
-            self.nodes.insert(id.clone(), new_node);
-        }
-
-        let Some(mut current_id) = self.parent.get(&id).cloned() else {
-            return;
-        };
-
-        loop {
-            let branch_progress = self.calculate_progress(document, &current_id);
-
-            if current_id == automerge::ObjId::Root {
-                self.root_progress = branch_progress;
-                break;
-            } else if let Some(node) = self.nodes.get_mut(&current_id) {
-                node.progress = branch_progress;
-            }
-
-            if let Some(next_parent_id) = self.parent.get(&current_id).cloned() {
-                current_id = next_parent_id;
-            } else {
-                break;
-            }
-        }
-
-        self.changes = document.get_heads();
-    }
-
-    pub(super) fn purge_recursive(&mut self, id: &automerge::ObjId) {
-        self.nodes.remove(id);
-        self.parent.remove(id);
-        if let Some(child_ids) = self.children.remove(id) {
-            for child_id in child_ids {
-                self.purge_recursive(&child_id);
-            }
-        }
-    }
-}
-
-impl Projection {
     fn calculate_progress(
         &self,
         document: &automerge::Automerge,
@@ -200,41 +253,14 @@ impl Projection {
             super::node::Progress::new(completed, total)
         }
     }
-}
 
-impl Projection {
-    pub fn apply_patches(
-        &mut self,
-        document: &automerge::Automerge,
-        patches: Vec<automerge::Patch>,
-    ) {
-        use automerge::patches::PatchAction;
-
-        let mut paths_to_recompute = Vec::new();
-
-        for patch in patches {
-            let obj_id = patch.obj;
-
-            match patch.action {
-                PatchAction::PutMap { .. }
-                | PatchAction::PutSeq { .. }
-                | PatchAction::Increment { .. }
-                | PatchAction::Insert { .. }
-                | PatchAction::DeleteMap { .. }
-                | PatchAction::DeleteSeq { .. } => {
-                    paths_to_recompute.push(obj_id);
-                }
-                _ => {}
+    pub(super) fn purge_recursive(&mut self, id: &automerge::ObjId) {
+        self.nodes.remove(id);
+        self.parent.remove(id);
+        if let Some(child_ids) = self.children.remove(id) {
+            for child_id in child_ids {
+                self.purge_recursive(&child_id);
             }
         }
-
-        paths_to_recompute.sort();
-        paths_to_recompute.dedup();
-
-        for id in paths_to_recompute {
-            self.update_up_from(id, None, document);
-        }
-
-        self.changes = document.get_heads();
     }
 }

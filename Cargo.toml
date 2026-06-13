@@ -14,7 +14,6 @@ application = { path = "application" }
 tokio         = { version = "1", features = ["full"] }
 tokio-scoped = "0.2.0"
 tokio-tungstenite = "0.29.0"
-
 futures-util = "0.3.32"
 
 serde         = { version = "1", features = ["derive"] }

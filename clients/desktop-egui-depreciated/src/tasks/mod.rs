@@ -94,6 +94,8 @@ impl Tasks {
     #[inline]
     fn parent_task(&mut self, core: &mut application::Core, ui: &mut egui::Ui) {
         if let Ok(node) = core.tree.get_node(&self.current_task) {
+            // TODO: Make that use reference to Projection field of that node and on commit just use
+            // that instead of storing it inside ui.data
             let name_id = name_edit_id(ui, &self.current_task);
             let desc_id = desc_edit_id(ui, &self.current_task);
 
