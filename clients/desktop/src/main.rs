@@ -2,21 +2,22 @@
 
 mod content;
 mod style;
-mod widgets;
 
 struct App {
     tab: Tab,
-    split_ratio: f32,
+    split_state: iced_resizable_split::State,
 
     tasks: content::Tasks,
     stats: content::Stats,
     config: content::History,
+
+    core: application::Core,
 }
 
 #[derive(Clone)]
 enum AppMessage {
     TabChanged(Tab),
-    AsideResized(f32),
+    AsideResized(iced_resizable_split::State),
 
     TasksMessage(content::TasksMessage),
     StatsMessage(content::StatsMessage),
@@ -105,18 +106,20 @@ impl App {
     fn new() -> Self {
         Self {
             tab: Tab::default(),
-            split_ratio: 0.25,
+            split_state: iced_resizable_split::State::new(0.3, 0.1, 0.8),
 
             tasks: content::Tasks::new(),
             stats: content::Stats::new(),
             config: content::History::new(),
+
+            core: application::Core::new().expect("Failed to start App"),
         }
     }
 
     fn update(&mut self, message: AppMessage) {
         match message {
             AppMessage::TabChanged(tab) => self.change_tab(tab),
-            AppMessage::AsideResized(new_ratio) => self.split_ratio = new_ratio,
+            AppMessage::AsideResized(new_state) => self.split_state.update(new_state),
 
             AppMessage::TasksMessage(message) => self.tasks.update(message),
             AppMessage::StatsMessage(message) => self.stats.update(message),
@@ -127,6 +130,7 @@ impl App {
     fn view(&self) -> iced::Element<'_, AppMessage> {
         let top_bar = Tab::view(self.tab);
 
+        let split_state = self.split_state;
         let (main, aside) = self.get_current_tab();
 
         let main = iced::widget::container(main)
@@ -134,7 +138,8 @@ impl App {
             .width(iced::Length::Fill)
             .style(style::default_panel);
 
-        let horizontal_border = widgets::border_horizontal(1);
+        let horizontal_border =
+            iced::widget::rule::horizontal(style::BORDER_WIDTH).style(style::border);
         let aside =
             iced::widget::column![top_bar, horizontal_border, iced::widget::container(aside)]
                 .width(iced::Length::Fill)
@@ -144,30 +149,25 @@ impl App {
             .height(iced::Length::Fill)
             .style(style::accent_panel);
 
-        widgets::SplitVertical::new(
-            aside,
-            main,
-            self.split_ratio,
-            0.05,
-            0.10,
-            AppMessage::AsideResized,
-        )
-        .into()
+        iced_resizable_split::split_vertical(aside, main, split_state, AppMessage::AsideResized)
+            .style(style::split_border)
+            .into()
     }
 
     fn theme(_self: &Self) -> iced::Theme {
-        iced::Theme::custom(
-            String::from("Midnight"),
-            iced::theme::Palette {
-                background: iced::Color::BLACK,
-                text: iced::Color::WHITE,
-                primary: iced::Color::from_rgb(0.8, 0.8, 0.8),
-
-                success: iced::Color::from_rgb(0.0, 1.0, 0.0),
-                warning: iced::Color::from_rgb(1.0, 0.8, 0.0),
-                danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
-            },
-        )
+        iced::Theme::KanagawaLotus
+        // iced::Theme::custom(
+        //     String::from("Midnight"),
+        //     iced::theme::Palette {
+        //         background: iced::Color::BLACK,
+        //         text: iced::Color::WHITE,
+        //         primary: iced::Color::from_rgb(0.8, 0.8, 0.8),
+        //
+        //         success: iced::Color::from_rgb(0.0, 1.0, 0.0),
+        //         warning: iced::Color::from_rgb(1.0, 0.8, 0.0),
+        //         danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
+        //     },
+        // )
     }
 
     fn subscription(&self) -> iced::Subscription<AppMessage> {
@@ -180,6 +180,9 @@ impl App {
 }
 
 fn main() -> iced::Result {
+    #[cfg(target_arch = "wasm32")]
+    console_error_panic_hook::set_once();
+
     iced::application(App::new, App::update, App::view)
         .title("Counter")
         .theme(App::theme)

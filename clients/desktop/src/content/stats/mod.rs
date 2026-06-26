@@ -1,5 +1,3 @@
-// src/content/stats/mod.rs
-
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -241,14 +239,14 @@ impl Program<ChartMessage> for MinimalChart {
 pub enum StatsMessage {
     Chart1Message(ChartMessage),
     Chart2Message(ChartMessage),
-    SplitResized(f32),
+    SplitResized(iced_resizable_split::State),
 }
 
 // ─── The Stats view ───
 pub struct Stats {
     pub plot1: Rc<RefCell<ChartData>>,
     pub plot2: Rc<RefCell<ChartData>>,
-    split_ratio: f32,
+    split_ratio: iced_resizable_split::State,
 }
 
 impl Stats {
@@ -262,7 +260,7 @@ impl Stats {
                 vec![18, 20, 21, 9, 2],
                 vec![12, 10, 4, 2, 14],
             ))),
-            split_ratio: 0.5,
+            split_ratio: iced_resizable_split::State::new(0.5, 0.1, 0.9),
         }
     }
 }
@@ -272,7 +270,7 @@ impl crate::Display for Stats {
 
     fn update(&mut self, message: Self::Message) {
         match message {
-            StatsMessage::SplitResized(new_split_ratio) => self.split_ratio = new_split_ratio,
+            StatsMessage::SplitResized(new_state) => self.split_ratio.update(new_state),
             StatsMessage::Chart1Message(ChartMessage::ViewChanged { pan_x, zoom_x }) => {
                 let mut data = self.plot1.borrow_mut();
                 data.pan_x = pan_x;
@@ -305,14 +303,13 @@ impl crate::Display for Stats {
                 .into();
         let bottom = bottom.map(StatsMessage::Chart2Message);
 
-        crate::widgets::SplitHorizontal::new(
+        iced_resizable_split::split_horizontal(
             top,
             bottom,
             self.split_ratio,
-            0.05,
-            0.10,
             StatsMessage::SplitResized,
         )
+        .style(crate::style::split_border)
         .into()
     }
 
