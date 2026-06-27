@@ -37,14 +37,11 @@ pub fn button(
         };
 
         match (status) {
-            iced::widget::button::Status::Pressed => {
-                println!("styling - clicked");
-                iced::widget::button::Style {
-                    background: Some(palette.text.into()),
-                    text_color: palette.background,
-                    ..base_style
-                }
-            }
+            iced::widget::button::Status::Pressed => iced::widget::button::Style {
+                background: Some(palette.text.into()),
+                text_color: palette.background,
+                ..base_style
+            },
             iced::widget::button::Status::Hovered => iced::widget::button::Style {
                 background: Some(lerp_color(palette.background, palette.text, 0.3).into()),
                 text_color: palette.text,
@@ -186,5 +183,12 @@ pub fn container(border: bool) -> impl Fn(&iced::Theme) -> iced::widget::contain
             snap: true,
             ..Default::default()
         }
+    }
+}
+
+pub fn icon(theme: &iced::Theme, status: iced::widget::svg::Status) -> iced::widget::svg::Style {
+    let palette = theme.palette();
+    iced::widget::svg::Style {
+        color: Some(palette.text),
     }
 }

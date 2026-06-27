@@ -1,6 +1,7 @@
 #![allow(unused)]
 
 mod content;
+mod icon;
 mod style;
 
 struct App {

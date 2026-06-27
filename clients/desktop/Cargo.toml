@@ -9,6 +9,7 @@ application.workspace = true
 
 automerge.workspace = true
 
-iced = { version = "0.14.0", features = ["canvas", "advanced"] }
+# TODO: Remove canvas and implement graphs better way
+iced = { version = "0.14.0", features = ["canvas", "advanced", "svg"] }
 iced-resizable-split = "1.0.1"
 
