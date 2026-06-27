@@ -4,7 +4,12 @@ pub struct Tasks {
 
 #[derive(Debug, Clone)]
 pub enum TasksMessage {
-    ChangeCurrentTab(automerge::ObjId),
+    GoBack,
+    GoNode(automerge::ObjId),
+    AddNode {
+        parent: automerge::ObjId,
+        node_data: application::tree::node::NodeData,
+    },
 }
 
 impl Tasks {
@@ -18,17 +23,39 @@ impl Tasks {
 impl crate::Display for Tasks {
     type Message = TasksMessage;
 
-    fn update(&mut self, message: Self::Message) {
+    fn update(&mut self, message: Self::Message, core: &mut application::Core) {
         match message {
-            TasksMessage::ChangeCurrentTab(id) => self.current_task = id,
+            TasksMessage::GoBack => {
+                println!("GoBack");
+                if let Ok(parent) = core.tree.get_parent(&self.current_task) {
+                    self.current_task = parent;
+                } else {
+                    println!("FAIL");
+                }
+            }
+
+            TasksMessage::GoNode(id) => self.current_task = id,
+
+            TasksMessage::AddNode { parent, node_data } => {
+                core.tree
+                    .append_child(&parent, &node_data)
+                    .expect("Failed to add child");
+            }
         }
     }
 
-    fn view_center(&self) -> iced::Element<'_, Self::Message> {
-        iced::widget::column![self.current_task(), Self::list_tasks()].into()
+    fn view_center(&self, core: &application::Core) -> iced::Element<'_, Self::Message> {
+        iced::widget::column![
+            self.current_progress(&core.tree),
+            self.list_tasks(&core.tree),
+            self.add_task()
+        ]
+        .width(iced::Length::Fill)
+        .height(iced::Length::Fill)
+        .into()
     }
 
-    fn view_aside(&self) -> iced::Element<'_, Self::Message> {
+    fn view_aside(&self, core: &application::Core) -> iced::Element<'_, Self::Message> {
         iced::widget::text("(TODO)")
             .width(iced::Length::Fill)
             .height(iced::Length::Fill)
@@ -39,65 +66,191 @@ impl crate::Display for Tasks {
 }
 
 impl Tasks {
-    fn current_task<'a>(&self) -> iced::Element<'a, TasksMessage> {
+    fn current_progress<'a>(
+        &self,
+        tree: &application::tree::Tree,
+    ) -> Option<iced::Element<'a, TasksMessage>> {
+        tree.get_progress(&self.current_task).map_or_else(
+            |_| None,
+            |progress| {
+                Some(
+                    iced::widget::column![
+                        iced::widget::container(
+                            iced::widget::progress_bar(0.0..=100.0, progress.procentage())
+                                .style(crate::style::progress)
+                        )
+                        .width(iced::Length::Fill)
+                        .height(iced::Length::Fixed(crate::style::TOP_BAR_HEIGHT)),
+                        iced::widget::rule::horizontal(crate::style::BORDER_WIDTH)
+                            .style(crate::style::border)
+                    ]
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Shrink)
+                    .into(),
+                )
+            },
+        )
+    }
+
+    fn list_tasks<'a>(
+        &self,
+        tree: &application::tree::Tree,
+    ) -> Option<iced::Element<'a, TasksMessage>> {
+        if let Ok(children) = tree.get_children(&self.current_task) {
+            Some(match children {
+                application::tree::NodeContent::Leaf((node_id, node_data)) => {
+                    Self::leaf_node(node_id, &node_data)
+                }
+
+                application::tree::NodeContent::Inner(nodes) => {
+                    let mut children_elements: Vec<iced::Element<'a, TasksMessage>> = Vec::new();
+                    for (node_id, node_data) in nodes {
+                        children_elements.push(Self::inner_node(node_id, &node_data));
+                    }
+
+                    iced::widget::column![
+                        self.current_task(tree),
+                        iced::widget::scrollable(
+                            iced::widget::column(children_elements)
+                                .spacing(4)
+                                .padding(4),
+                        )
+                        .style(scroll_style)
+                        .height(iced::Length::Fill)
+                    ]
+                    .into()
+                }
+            })
+        } else {
+            None
+        }
+    }
+
+    fn current_task<'a>(
+        &self,
+        tree: &application::tree::Tree,
+    ) -> Option<iced::Element<'a, TasksMessage>> {
+        tree.get_node(&self.current_task).map_or_else(
+            |_| None,
+            |node_data| {
+                Some(
+                    iced::widget::column![
+                        iced::widget::row![
+                            iced::widget::button(
+                                iced::widget::text("<")
+                                    .width(iced::Length::Fill)
+                                    .height(iced::Length::Fill)
+                                    .center(),
+                            )
+                            .width(iced::Length::Fixed(48.0))
+                            .height(iced::Length::Fixed(48.0))
+                            .style(crate::style::button(true))
+                            .on_press(TasksMessage::GoBack),
+                            iced::widget::space()
+                                .height(iced::Length::Fill)
+                                .width(iced::Length::Fixed(4.0)),
+                            iced::widget::column![
+                                iced::widget::text(node_data.name),
+                                iced::widget::text(node_data.desc),
+                            ]
+                        ]
+                        .padding(4),
+                        iced::widget::rule::horizontal(crate::style::BORDER_WIDTH)
+                            .style(crate::style::border)
+                    ]
+                    .height(iced::Length::Shrink)
+                    .into(),
+                )
+            },
+        )
+    }
+
+    fn leaf_node<'a>(
+        id: automerge::ObjId,
+        data: &application::tree::node::NodeData,
+    ) -> iced::Element<'a, TasksMessage> {
         iced::widget::column![
             iced::widget::row![
                 iced::widget::button(
                     iced::widget::text("<")
                         .width(iced::Length::Fill)
                         .height(iced::Length::Fill)
-                        .center(),
+                        .center()
                 )
-                .width(iced::Length::Fixed(48.0))
-                .height(iced::Length::Fixed(48.0))
-                .style(crate::style::button)
-                .on_press(TasksMessage::ChangeCurrentTab(automerge::ObjId::Root)),
-                iced::widget::space()
-                    .height(iced::Length::Fill)
-                    .width(iced::Length::Fixed(4.0)),
-                iced::widget::column![iced::widget::text("NAME"), iced::widget::text("DESC"),]
+                .width(iced::Length::Fixed(34.0))
+                .height(iced::Length::Fixed(34.0))
+                .style(crate::style::button(true))
+                .on_press(TasksMessage::GoBack)
             ]
+            .height(iced::Length::Shrink)
             .padding(4),
-            iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border)
+            iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),
+            iced::widget::container(
+                iced::widget::text("(TODO)")
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
+                    .align_x(iced::Alignment::Center)
+                    .align_y(iced::Alignment::Center),
+            )
+            .height(iced::Length::Fill)
         ]
-        .height(iced::Length::Shrink)
+        .height(iced::Length::Fill)
         .into()
     }
 
-    fn list_tasks<'a>() -> iced::Element<'a, TasksMessage> {
-        let mut children: Vec<iced::Element<'a, TasksMessage>> = Vec::new();
-
-        for _ in 0..10 {
-            children.push(Self::node());
-        }
-
-        iced::widget::scrollable(iced::widget::column(children).spacing(4).padding(4))
-            .style(scroll_style)
-            .into()
-    }
-
-    fn node<'a>() -> iced::Element<'a, TasksMessage> {
-        iced::widget::container(
+    fn inner_node<'a>(
+        id: automerge::ObjId,
+        data: &application::tree::node::NodeData,
+    ) -> iced::Element<'a, TasksMessage> {
+        iced::widget::container(iced::widget::row![
             iced::widget::text("(TODO)")
                 .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
                 .align_x(iced::Alignment::Center)
                 .align_y(iced::Alignment::Center),
-        )
-        .style(|theme| iced::widget::container::Style {
-            border: iced::Border {
-                color: iced::Color::WHITE,
-                width: crate::style::BORDER_WIDTH,
-                radius: iced::border::radius(0),
-            },
-            snap: true,
-            ..Default::default()
-        })
+            iced::widget::button("+")
+                .style(crate::style::button(true))
+                .on_press(TasksMessage::GoBack),
+            iced::widget::button("-")
+                .style(crate::style::button(true))
+                .on_press(TasksMessage::GoBack),
+            iced::widget::space()
+                .height(iced::Length::Fill)
+                .width(iced::Length::Fixed(4.0)),
+            iced::widget::button(">")
+                .style(crate::style::button(true))
+                .on_press(TasksMessage::GoNode(id))
+        ])
+        .style(crate::style::container(true))
         .width(iced::Length::Fill)
-        .height(iced::Length::Fixed(200.0))
+        .height(iced::Length::Shrink)
+        .padding(4)
+        .into()
+    }
+
+    fn add_task<'a>(&self) -> iced::Element<'a, TasksMessage> {
+        iced::widget::column![
+            iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),
+            iced::widget::button(
+                iced::widget::text("+")
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
+                    .center()
+            )
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill)
+            .style(crate::style::button(false))
+            .on_press(TasksMessage::AddNode {
+                parent: self.current_task.clone(),
+                node_data: application::tree::node::NodeData::default(),
+            })
+        ]
+        .width(iced::Length::Fill)
+        .height(iced::Length::Fixed(24.0))
         .into()
     }
 }
+
 fn scroll_style(
     _theme: &iced::Theme,
     status: iced::widget::scrollable::Status,
@@ -110,7 +263,7 @@ fn scroll_style(
         iced::widget::scrollable::Status::Dragged { .. } => {
             (8.0, iced::Background::Color(iced::Color::WHITE))
         }
-        _ => (
+        iced::widget::scrollable::Status::Active { .. } => (
             8.0,
             iced::Background::Color(iced::Color::from_rgba8(255, 255, 255, 0.4)),
         ),
@@ -126,7 +279,7 @@ fn scroll_style(
                 background: handle,
                 border: iced::Border {
                     radius: 0.0.into(),
-                    width: width,
+                    width,
                     ..Default::default()
                 },
             },
@@ -139,7 +292,7 @@ fn scroll_style(
                 background: handle,
                 border: iced::Border {
                     radius: 0.0.into(),
-                    width: width,
+                    width,
                     ..Default::default()
                 },
             },

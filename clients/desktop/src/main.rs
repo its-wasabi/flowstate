@@ -35,11 +35,11 @@ enum Tab {
 trait Display {
     type Message;
 
-    fn update(&mut self, message: Self::Message);
+    fn update(&mut self, message: Self::Message, core: &mut application::Core);
 
-    fn view_center(&self) -> iced::Element<'_, Self::Message>;
+    fn view_center(&self, core: &application::Core) -> iced::Element<'_, Self::Message>;
 
-    fn view_aside(&self) -> iced::Element<'_, Self::Message>;
+    fn view_aside(&self, core: &application::Core) -> iced::Element<'_, Self::Message>;
 
     fn subscription(&self) -> iced::Subscription<Self::Message> {
         iced::Subscription::none()
@@ -87,16 +87,28 @@ impl App {
     fn get_current_tab(&self) -> (iced::Element<'_, AppMessage>, iced::Element<'_, AppMessage>) {
         match self.tab {
             Tab::Tasks => (
-                self.tasks.view_center().map(AppMessage::TasksMessage),
-                self.tasks.view_aside().map(AppMessage::TasksMessage),
+                self.tasks
+                    .view_center(&self.core)
+                    .map(AppMessage::TasksMessage),
+                self.tasks
+                    .view_aside(&self.core)
+                    .map(AppMessage::TasksMessage),
             ),
             Tab::Stats => (
-                self.stats.view_center().map(AppMessage::StatsMessage),
-                self.stats.view_aside().map(AppMessage::StatsMessage),
+                self.stats
+                    .view_center(&self.core)
+                    .map(AppMessage::StatsMessage),
+                self.stats
+                    .view_aside(&self.core)
+                    .map(AppMessage::StatsMessage),
             ),
             Tab::History => (
-                self.config.view_center().map(AppMessage::HistoryMessage),
-                self.config.view_aside().map(AppMessage::HistoryMessage),
+                self.config
+                    .view_center(&self.core)
+                    .map(AppMessage::HistoryMessage),
+                self.config
+                    .view_aside(&self.core)
+                    .map(AppMessage::HistoryMessage),
             ),
         }
     }
@@ -121,9 +133,9 @@ impl App {
             AppMessage::TabChanged(tab) => self.change_tab(tab),
             AppMessage::AsideResized(new_state) => self.split_state.update(new_state),
 
-            AppMessage::TasksMessage(message) => self.tasks.update(message),
-            AppMessage::StatsMessage(message) => self.stats.update(message),
-            AppMessage::HistoryMessage(message) => self.config.update(message),
+            AppMessage::TasksMessage(message) => self.tasks.update(message, &mut self.core),
+            AppMessage::StatsMessage(message) => self.stats.update(message, &mut self.core),
+            AppMessage::HistoryMessage(message) => self.config.update(message, &mut self.core),
         }
     }
 
@@ -155,19 +167,19 @@ impl App {
     }
 
     fn theme(_self: &Self) -> iced::Theme {
-        iced::Theme::KanagawaLotus
-        // iced::Theme::custom(
-        //     String::from("Midnight"),
-        //     iced::theme::Palette {
-        //         background: iced::Color::BLACK,
-        //         text: iced::Color::WHITE,
-        //         primary: iced::Color::from_rgb(0.8, 0.8, 0.8),
-        //
-        //         success: iced::Color::from_rgb(0.0, 1.0, 0.0),
-        //         warning: iced::Color::from_rgb(1.0, 0.8, 0.0),
-        //         danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
-        //     },
-        // )
+        // iced::Theme::KanagawaLotus
+        iced::Theme::custom(
+            String::from("Midnight"),
+            iced::theme::Palette {
+                background: iced::Color::BLACK,
+                text: iced::Color::WHITE,
+                primary: iced::Color::from_rgb(0.8, 0.8, 0.8),
+
+                success: iced::Color::from_rgb(0.0, 1.0, 0.0),
+                warning: iced::Color::from_rgb(1.0, 0.8, 0.0),
+                danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
+            },
+        )
     }
 
     fn subscription(&self) -> iced::Subscription<AppMessage> {

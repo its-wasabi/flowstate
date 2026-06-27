@@ -8,7 +8,7 @@ pub(crate) mod sync;
 
 use crate::tree::error::TreeError;
 use automerge::{ReadDoc, transaction::Transactable};
-pub use node::Node;
+pub use node::NodeData;
 use std::collections::HashMap;
 
 /// List of all children of that object
@@ -23,8 +23,8 @@ pub const NODE_TASK_TOTAL: &str = "t";
 pub const NODE_TASK_COMPLETED: &str = "c";
 
 pub enum NodeContent {
-    Leaf((automerge::ObjId, node::Node)),
-    Inner(Vec<(automerge::ObjId, node::Node)>),
+    Leaf((automerge::ObjId, node::NodeData)),
+    Inner(Vec<(automerge::ObjId, node::NodeData)>),
 }
 
 #[derive(Debug)]
@@ -92,7 +92,7 @@ impl Tree {
 }
 
 impl Tree {
-    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<node::Node> {
+    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<node::NodeData> {
         self.projection
             .nodes
             .get(id)
@@ -111,7 +111,7 @@ impl Tree {
         if child_ids.is_empty() {
             Ok(NodeContent::Leaf((
                 id.clone(),
-                node::Node::from_doc(&self.document, id)?,
+                node::NodeData::from_doc(&self.document, id)?,
             )))
         } else {
             let mut childrens = Vec::with_capacity(child_ids.len());
@@ -148,7 +148,7 @@ impl Tree {
     pub fn append_child(
         &mut self,
         parent_id: &automerge::ObjId,
-        node: &node::Node,
+        node: &node::NodeData,
     ) -> error::Result<automerge::ObjId> {
         let mut tx = self.document.transaction();
         let list_id = match tx.get(parent_id, CHILDREN)? {

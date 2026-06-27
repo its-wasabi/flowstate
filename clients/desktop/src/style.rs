@@ -16,42 +16,47 @@ pub fn lerp_color(start: iced::Color, end: iced::Color, t: f32) -> iced::Color {
 }
 
 pub fn button(
-    theme: &iced::Theme,
-    status: iced::widget::button::Status,
-) -> iced::widget::button::Style {
-    let palette = theme.palette();
-    let base_style = iced::widget::button::Style {
-        background: None,
-        text_color: palette.text,
-        border: iced::Border {
-            color: lerp_color(palette.background, palette.text, 0.3),
-            width: BORDER_WIDTH,
-            radius: iced::border::Radius::new(0),
-        },
-        snap: true,
-        ..Default::default()
-    };
-
-    match (status) {
-        iced::widget::button::Status::Pressed => {
-            println!("PRESS");
-            iced::widget::button::Style {
-                background: Some(palette.text.into()),
-                text_color: palette.background,
-                ..base_style
-            }
-        }
-        iced::widget::button::Status::Hovered => iced::widget::button::Style {
-            background: Some(lerp_color(palette.background, palette.text, 0.3).into()),
+    border: bool,
+) -> impl Fn(&iced::Theme, iced::widget::button::Status) -> iced::widget::button::Style {
+    move |theme, status| {
+        let palette = theme.palette();
+        let base_style = iced::widget::button::Style {
+            background: None,
             text_color: palette.text,
-            ..base_style
-        },
+            border: iced::Border {
+                color: if border {
+                    lerp_color(palette.background, palette.text, 0.3)
+                } else {
+                    iced::Color::TRANSPARENT
+                },
+                width: if border { BORDER_WIDTH } else { 0.0 },
+                radius: iced::border::Radius::new(0),
+            },
+            snap: true,
+            ..Default::default()
+        };
 
-        iced::widget::button::Status::Active => base_style,
-        iced::widget::button::Status::Disabled => iced::widget::button::Style {
-            text_color: lerp_color(palette.background, palette.text, 0.1),
-            ..base_style
-        },
+        match (status) {
+            iced::widget::button::Status::Pressed => {
+                println!("styling - clicked");
+                iced::widget::button::Style {
+                    background: Some(palette.text.into()),
+                    text_color: palette.background,
+                    ..base_style
+                }
+            }
+            iced::widget::button::Status::Hovered => iced::widget::button::Style {
+                background: Some(lerp_color(palette.background, palette.text, 0.3).into()),
+                text_color: palette.text,
+                ..base_style
+            },
+
+            iced::widget::button::Status::Active => base_style,
+            iced::widget::button::Status::Disabled => iced::widget::button::Style {
+                text_color: lerp_color(palette.background, palette.text, 0.1),
+                ..base_style
+            },
+        }
     }
 }
 
@@ -153,5 +158,33 @@ pub fn split_border(
         },
         divider_width: BORDER_WIDTH,
         snap: true,
+    }
+}
+
+pub fn progress(theme: &iced::Theme) -> iced::widget::progress_bar::Style {
+    let palette = theme.palette();
+    iced::widget::progress_bar::Style {
+        background: iced::Color::TRANSPARENT.into(),
+        bar: palette.text.into(),
+        border: iced::Border {
+            color: iced::Color::TRANSPARENT,
+            width: 0.0,
+            radius: iced::border::Radius::new(0),
+        },
+    }
+}
+
+pub fn container(border: bool) -> impl Fn(&iced::Theme) -> iced::widget::container::Style {
+    move |theme| {
+        let palette = theme.palette();
+        iced::widget::container::Style {
+            border: iced::Border {
+                color: lerp_color(palette.background, palette.text, 0.3),
+                width: crate::style::BORDER_WIDTH,
+                radius: iced::border::radius(0),
+            },
+            snap: true,
+            ..Default::default()
+        }
     }
 }

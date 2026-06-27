@@ -58,14 +58,14 @@ impl std::fmt::Display for Progress {
 }
 
 #[derive(Debug, Clone)]
-pub struct Node {
+pub struct NodeData {
     pub name: String,
     pub desc: String,
 
     pub progress: Progress,
 }
 
-impl Default for Node {
+impl Default for NodeData {
     fn default() -> Self {
         Self {
             name: String::new(),
@@ -75,7 +75,7 @@ impl Default for Node {
     }
 }
 
-impl Node {
+impl NodeData {
     pub(super) fn apply_data(
         &self,
         tx: &mut automerge::transaction::Transaction<'_>,
@@ -98,7 +98,7 @@ impl Node {
     }
 }
 
-impl Node {
+impl NodeData {
     pub(super) fn from_doc(
         doc: &automerge::Automerge,
         id: &automerge::ObjId,

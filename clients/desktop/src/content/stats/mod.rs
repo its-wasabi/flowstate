@@ -268,7 +268,7 @@ impl Stats {
 impl crate::Display for Stats {
     type Message = StatsMessage;
 
-    fn update(&mut self, message: Self::Message) {
+    fn update(&mut self, message: Self::Message, core: &mut application::Core) {
         match message {
             StatsMessage::SplitResized(new_state) => self.split_ratio.update(new_state),
             StatsMessage::Chart1Message(ChartMessage::ViewChanged { pan_x, zoom_x }) => {
@@ -288,7 +288,7 @@ impl crate::Display for Stats {
         }
     }
 
-    fn view_center(&self) -> iced::Element<'_, Self::Message> {
+    fn view_center(&self, core: &application::Core) -> iced::Element<'_, Self::Message> {
         let top: iced::Element<'_, ChartMessage> =
             iced::widget::canvas::Canvas::new(MinimalChart::new(self.plot1.clone()))
                 .width(iced::Length::Fill)
@@ -313,7 +313,7 @@ impl crate::Display for Stats {
         .into()
     }
 
-    fn view_aside(&self) -> iced::Element<'_, Self::Message> {
+    fn view_aside(&self, core: &application::Core) -> iced::Element<'_, Self::Message> {
         iced::widget::text("HELLO ASIDE").into()
     }
 

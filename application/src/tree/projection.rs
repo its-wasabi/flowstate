@@ -7,7 +7,7 @@ pub struct Projection {
     pub(super) changes: Vec<automerge::ChangeHash>,
 
     pub(super) root_progress: super::node::Progress,
-    pub(super) nodes: FxHashMap<automerge::ObjId, super::node::Node>,
+    pub(super) nodes: FxHashMap<automerge::ObjId, super::node::NodeData>,
     pub(super) parent: FxHashMap<automerge::ObjId, automerge::ObjId>,
     pub(super) children: FxHashMap<automerge::ObjId, Vec<automerge::ObjId>>,
 }
@@ -50,7 +50,7 @@ impl Projection {
         id: automerge::ObjId,
         document: &automerge::Automerge,
     ) -> super::error::Result<()> {
-        let node = super::node::Node::from_doc(document, &id)?;
+        let node = super::node::NodeData::from_doc(document, &id)?;
         self.nodes.entry(id).and_modify(|stored_node| {
             stored_node.name = node.name;
             stored_node.desc = node.desc;
@@ -124,7 +124,7 @@ impl Projection {
         // Re-parse marked nodes and bubble up their progress calculations
         for id in paths_to_recompute {
             if id != automerge::ObjId::Root {
-                if let Ok(mut node_data) = super::node::Node::from_doc(document, &id) {
+                if let Ok(mut node_data) = super::node::NodeData::from_doc(document, &id) {
                     // Retain existing progress until recalculated to prevent flicker
                     if let Some(existing) = self.nodes.get(&id) {
                         node_data.progress = existing.progress;
@@ -194,7 +194,7 @@ impl Projection {
             return Ok(progress);
         }
 
-        if let Ok(mut node_data) = super::node::Node::from_doc(document, id) {
+        if let Ok(mut node_data) = super::node::NodeData::from_doc(document, id) {
             node_data.progress = progress;
             self.nodes.insert(id.clone(), node_data);
         }
@@ -237,7 +237,7 @@ impl Projection {
             if id == &automerge::ObjId::Root {
                 return super::node::Progress::default();
             }
-            if let Ok(node) = super::node::Node::from_doc(document, id) {
+            if let Ok(node) = super::node::NodeData::from_doc(document, id) {
                 return node.progress;
             }
             super::node::Progress::default()
