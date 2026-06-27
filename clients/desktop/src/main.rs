@@ -168,19 +168,19 @@ impl App {
     }
 
     fn theme(_self: &Self) -> iced::Theme {
-        // iced::Theme::KanagawaLotus
-        iced::Theme::custom(
-            String::from("Midnight"),
-            iced::theme::Palette {
-                background: iced::Color::BLACK,
-                text: iced::Color::WHITE,
-                primary: iced::Color::from_rgb(0.8, 0.8, 0.8),
-
-                success: iced::Color::from_rgb(0.0, 1.0, 0.0),
-                warning: iced::Color::from_rgb(1.0, 0.8, 0.0),
-                danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
-            },
-        )
+        iced::Theme::KanagawaLotus
+        // iced::Theme::custom(
+        //     String::from("Midnight"),
+        //     iced::theme::Palette {
+        //         background: iced::Color::BLACK,
+        //         text: iced::Color::WHITE,
+        //         primary: iced::Color::from_rgb(0.8, 0.8, 0.8),
+        //
+        //         success: iced::Color::from_rgb(0.0, 1.0, 0.0),
+        //         warning: iced::Color::from_rgb(1.0, 0.8, 0.0),
+        //         danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
+        //     },
+        // )
     }
 
     fn subscription(&self) -> iced::Subscription<AppMessage> {

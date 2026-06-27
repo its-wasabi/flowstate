@@ -135,14 +135,15 @@ impl Tasks {
         tree.get_node(&self.current_task).map_or_else(
             |_| None,
             |node_data| {
+                let (left_btn_style, left_svg_style) = crate::style::button_with_icon(true);
                 Some(
                     iced::widget::column![
                         iced::widget::row![
-                            iced::widget::button(crate::icon::left())
+                            iced::widget::button(crate::icon::left(left_svg_style))
                                 .width(iced::Length::Fixed(48.0))
                                 .height(iced::Length::Fixed(48.0))
                                 .padding(4)
-                                .style(crate::style::button(true))
+                                .style(left_btn_style)
                                 .on_press(TasksMessage::GoBack),
                             iced::widget::space()
                                 .height(iced::Length::Fill)
@@ -167,13 +168,14 @@ impl Tasks {
         id: automerge::ObjId,
         data: &application::tree::node::NodeData,
     ) -> iced::Element<'a, TasksMessage> {
+        let (left_btn_style, left_svg_style) = crate::style::button_with_icon(true);
         iced::widget::column![
             iced::widget::row![
-                iced::widget::button(crate::icon::left())
+                iced::widget::button(crate::icon::left(left_svg_style))
                     .width(iced::Length::Fixed(34.0))
                     .height(iced::Length::Fixed(34.0))
                     .padding(4)
-                    .style(crate::style::button(true))
+                    .style(left_btn_style)
                     .on_press(TasksMessage::GoBack)
             ]
             .height(iced::Length::Shrink)
@@ -196,32 +198,36 @@ impl Tasks {
         id: automerge::ObjId,
         data: &application::tree::node::NodeData,
     ) -> iced::Element<'a, TasksMessage> {
+        let (right_btn_style, right_svg_style) = crate::style::button_with_icon(true);
+        let (plus_btn_style, plus_svg_style) = crate::style::button_with_icon(true);
+        let (minus_btn_style, minus_svg_style) = crate::style::button_with_icon(true);
+
         iced::widget::container(iced::widget::row![
             iced::widget::text("(TODO)")
                 .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
                 .align_x(iced::Alignment::Start)
                 .align_y(iced::Alignment::Center),
-            iced::widget::button(crate::icon::minus())
+            iced::widget::button(crate::icon::minus(minus_svg_style))
                 .width(iced::Length::Fixed(24.0))
                 .height(iced::Length::Fixed(24.0))
                 .padding(4)
-                .style(crate::style::button(true))
+                .style(minus_btn_style)
                 .on_press(TasksMessage::GoBack),
-            iced::widget::button(crate::icon::plus())
+            iced::widget::button(crate::icon::plus(plus_svg_style))
                 .width(iced::Length::Fixed(24.0))
                 .height(iced::Length::Fixed(24.0))
                 .padding(4)
-                .style(crate::style::button(true))
+                .style(plus_btn_style)
                 .on_press(TasksMessage::GoBack),
             iced::widget::space()
                 .height(iced::Length::Fill)
                 .width(iced::Length::Fixed(4.0)),
-            iced::widget::button(crate::icon::right())
+            iced::widget::button(crate::icon::right(right_svg_style))
                 .width(iced::Length::Fixed(24.0))
                 .height(iced::Length::Fixed(24.0))
                 .padding(4)
-                .style(crate::style::button(true))
+                .style(right_btn_style)
                 .on_press(TasksMessage::GoNode(id))
         ])
         .style(crate::style::container(true))
@@ -232,13 +238,15 @@ impl Tasks {
     }
 
     fn add_task<'a>(&self) -> iced::Element<'a, TasksMessage> {
+        let (plus_btn_style, plus_svg_style) = crate::style::button_with_icon(false);
+
         iced::widget::column![
             iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),
-            iced::widget::button(crate::icon::plus())
+            iced::widget::button(crate::icon::plus(plus_svg_style))
                 .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
                 .padding(4)
-                .style(crate::style::button(false))
+                .style(plus_btn_style)
                 .on_press(TasksMessage::AddNode {
                     parent: self.current_task.clone(),
                     node_data: application::tree::node::NodeData::default(),

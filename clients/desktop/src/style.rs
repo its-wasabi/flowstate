@@ -101,6 +101,72 @@ pub fn tab_button_style(
     }
 }
 
+pub fn button_with_icon(
+    border: bool,
+) -> (
+    impl Fn(&iced::Theme, iced::widget::button::Status) -> iced::widget::button::Style,
+    impl Fn(&iced::Theme, iced::widget::svg::Status) -> iced::widget::svg::Style,
+) {
+    let shared_status =
+        std::rc::Rc::new(std::cell::Cell::new(iced::widget::button::Status::Active));
+    let svg_status = shared_status.clone();
+
+    let btn = move |theme: &iced::Theme, status: iced::widget::button::Status| {
+        shared_status.set(status);
+        let palette = theme.palette();
+
+        let base_style = iced::widget::button::Style {
+            background: None,
+            text_color: palette.text,
+            border: iced::Border {
+                color: if border {
+                    lerp_color(palette.background, palette.text, 0.3)
+                } else {
+                    iced::Color::TRANSPARENT
+                },
+                width: if border { BORDER_WIDTH } else { 0.0 },
+                radius: iced::border::Radius::new(0),
+            },
+            snap: true,
+            ..Default::default()
+        };
+
+        match (status) {
+            iced::widget::button::Status::Pressed => iced::widget::button::Style {
+                background: Some(palette.text.into()),
+                text_color: palette.background,
+                ..base_style
+            },
+            iced::widget::button::Status::Hovered => iced::widget::button::Style {
+                background: Some(lerp_color(palette.background, palette.text, 0.3).into()),
+                text_color: palette.text,
+                ..base_style
+            },
+
+            iced::widget::button::Status::Active => base_style,
+            iced::widget::button::Status::Disabled => iced::widget::button::Style {
+                text_color: lerp_color(palette.background, palette.text, 0.1),
+                ..base_style
+            },
+        }
+    };
+
+    let icon = move |theme: &iced::Theme, _: iced::widget::svg::Status| {
+        let palette = theme.palette();
+        iced::widget::svg::Style {
+            color: Some(match svg_status.get() {
+                iced::widget::button::Status::Pressed => palette.background,
+                iced::widget::button::Status::Disabled => {
+                    lerp_color(palette.background, palette.text, 0.1)
+                }
+                _ => palette.text,
+            }),
+        }
+    };
+
+    (btn, icon)
+}
+
 pub fn default_panel(theme: &iced::Theme) -> iced::widget::container::Style {
     let palette = theme.palette();
     iced::widget::container::Style {

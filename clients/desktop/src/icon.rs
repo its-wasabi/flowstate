@@ -1,43 +1,41 @@
 const RIGHT_BYTES: &[u8] = include_bytes!("../../assets/icons/right.svg");
-pub fn right<Message>() -> iced::Element<'static, Message> {
-    let handle = iced::widget::svg::Handle::from_memory(RIGHT_BYTES);
-    iced::widget::svg(handle)
-        .content_fit(iced::ContentFit::Contain)
-        .width(iced::Length::Fill)
-        .height(iced::Length::Fill)
-        .style(crate::style::icon)
-        .into()
-}
-
 const LEFT_BYTES: &[u8] = include_bytes!("../../assets/icons/left.svg");
-pub fn left<Message>() -> iced::Element<'static, Message> {
-    let handle = iced::widget::svg::Handle::from_memory(LEFT_BYTES);
-    iced::widget::svg(handle)
-        .content_fit(iced::ContentFit::Contain)
-        .width(iced::Length::Fill)
-        .height(iced::Length::Fill)
-        .style(crate::style::icon)
-        .into()
-}
-
 const PLUS_BYTES: &[u8] = include_bytes!("../../assets/icons/plus.svg");
-pub fn plus<Message>() -> iced::Element<'static, Message> {
-    let handle = iced::widget::svg::Handle::from_memory(PLUS_BYTES);
+const MINUS_BYTES: &[u8] = include_bytes!("../../assets/icons/minus.svg");
+
+fn make_icon<Message>(
+    bytes: &'static [u8],
+    style: impl Fn(&iced::Theme, iced::widget::svg::Status) -> iced::widget::svg::Style + 'static,
+) -> iced::Element<'static, Message> {
+    let handle = iced::widget::svg::Handle::from_memory(bytes);
     iced::widget::svg(handle)
         .content_fit(iced::ContentFit::Contain)
         .width(iced::Length::Fill)
         .height(iced::Length::Fill)
-        .style(crate::style::icon)
+        .style(style)
         .into()
 }
 
-const MINUS_BYTES: &[u8] = include_bytes!("../../assets/icons/minus.svg");
-pub fn minus<Message>() -> iced::Element<'static, Message> {
-    let handle = iced::widget::svg::Handle::from_memory(MINUS_BYTES);
-    iced::widget::svg(handle)
-        .content_fit(iced::ContentFit::Contain)
-        .width(iced::Length::Fill)
-        .height(iced::Length::Fill)
-        .style(crate::style::icon)
-        .into()
+pub fn right<Message>(
+    style: impl Fn(&iced::Theme, iced::widget::svg::Status) -> iced::widget::svg::Style + 'static,
+) -> iced::Element<'static, Message> {
+    make_icon(RIGHT_BYTES, style)
+}
+
+pub fn left<Message>(
+    style: impl Fn(&iced::Theme, iced::widget::svg::Status) -> iced::widget::svg::Style + 'static,
+) -> iced::Element<'static, Message> {
+    make_icon(LEFT_BYTES, style)
+}
+
+pub fn plus<Message>(
+    style: impl Fn(&iced::Theme, iced::widget::svg::Status) -> iced::widget::svg::Style + 'static,
+) -> iced::Element<'static, Message> {
+    make_icon(PLUS_BYTES, style)
+}
+
+pub fn minus<Message>(
+    style: impl Fn(&iced::Theme, iced::widget::svg::Status) -> iced::widget::svg::Style + 'static,
+) -> iced::Element<'static, Message> {
+    make_icon(MINUS_BYTES, style)
 }
