@@ -166,7 +166,7 @@ impl Tree {
 }
 
 impl Tree {
-    pub fn remove(&mut self, id: &automerge::ObjId) -> error::Result<()> {
+    pub fn delete(&mut self, id: &automerge::ObjId) -> error::Result<()> {
         let mut parents = self.document.parents(id)?;
         let parent_list = parents.next().ok_or(error::TreeError::MissingProperty)?;
         let parent_node = parents.next().ok_or(error::TreeError::MissingRoot)?;

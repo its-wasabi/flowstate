@@ -1,5 +1,5 @@
 pub struct Tasks {
-    current_task: automerge::ObjId,
+    current_task_id: automerge::ObjId,
 }
 
 #[derive(Debug, Clone)]
@@ -10,12 +10,13 @@ pub enum TasksMessage {
         parent: automerge::ObjId,
         node_data: application::tree::node::NodeData,
     },
+    DelNode(automerge::ObjId),
 }
 
 impl Tasks {
     pub const fn new() -> Self {
         Self {
-            current_task: automerge::ObjId::Root,
+            current_task_id: automerge::ObjId::Root,
         }
     }
 }
@@ -27,19 +28,27 @@ impl crate::Display for Tasks {
         match message {
             TasksMessage::GoBack => {
                 println!("GoBack");
-                if let Ok(parent) = core.tree.get_parent(&self.current_task) {
-                    self.current_task = parent;
+                if let Ok(parent) = core.tree.get_parent(&self.current_task_id) {
+                    self.current_task_id = parent;
                 } else {
                     println!("FAIL");
                 }
             }
 
-            TasksMessage::GoNode(id) => self.current_task = id,
+            TasksMessage::GoNode(id) => self.current_task_id = id,
 
             TasksMessage::AddNode { parent, node_data } => {
                 core.tree
                     .append_child(&parent, &node_data)
                     .expect("Failed to add child");
+            }
+            TasksMessage::DelNode(id) => {
+                core.tree.delete(&id);
+                if id == self.current_task_id
+                    && let Ok(parent) = core.tree.get_parent(&self.current_task_id)
+                {
+                    self.current_task_id = parent;
+                }
             }
         }
     }
@@ -70,7 +79,7 @@ impl Tasks {
         &self,
         tree: &application::tree::Tree,
     ) -> Option<iced::Element<'a, TasksMessage>> {
-        tree.get_progress(&self.current_task).map_or_else(
+        tree.get_progress(&self.current_task_id).map_or_else(
             |_| None,
             |progress| {
                 Some(
@@ -96,7 +105,7 @@ impl Tasks {
         &self,
         tree: &application::tree::Tree,
     ) -> Option<iced::Element<'a, TasksMessage>> {
-        tree.get_children(&self.current_task).map_or_else(
+        tree.get_children(&self.current_task_id).map_or_else(
             |_| None,
             |children| {
                 Some(match children {
@@ -132,7 +141,7 @@ impl Tasks {
         &self,
         tree: &application::tree::Tree,
     ) -> Option<iced::Element<'a, TasksMessage>> {
-        tree.get_node(&self.current_task).map_or_else(
+        tree.get_node(&self.current_task_id).map_or_else(
             |_| None,
             |node_data| {
                 let (left_btn_style, left_svg_style) =
@@ -171,6 +180,12 @@ impl Tasks {
     ) -> iced::Element<'a, TasksMessage> {
         let (left_btn_style, left_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Default, true);
+        let (minus_btn_style, minus_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Warn, true);
+        let (plus_btn_style, plus_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Ok, true);
+        let (delete_btn_style, delete_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Danger, true);
         iced::widget::column![
             iced::widget::row![
                 iced::widget::button(crate::icon::left(left_svg_style))
@@ -178,7 +193,31 @@ impl Tasks {
                     .height(iced::Length::Fixed(38.0))
                     .padding(4)
                     .style(left_btn_style)
-                    .on_press(TasksMessage::GoBack)
+                    .on_press(TasksMessage::GoBack),
+                iced::widget::space()
+                    .height(iced::Length::Fill)
+                    .width(iced::Length::Fixed(4.0)),
+                iced::widget::button(crate::icon::delete(delete_svg_style))
+                    .width(iced::Length::Fixed(38.0))
+                    .height(iced::Length::Fixed(38.0))
+                    .padding(4)
+                    .style(delete_btn_style)
+                    .on_press(TasksMessage::DelNode(id)),
+                iced::widget::space()
+                    .height(iced::Length::Fill)
+                    .width(iced::Length::Fixed(4.0)),
+                iced::widget::button(crate::icon::minus(minus_svg_style))
+                    .width(iced::Length::Fixed(38.0))
+                    .height(iced::Length::Fixed(38.0))
+                    .padding(4)
+                    .style(minus_btn_style)
+                    .on_press(TasksMessage::GoBack),
+                iced::widget::button(crate::icon::plus(plus_svg_style))
+                    .width(iced::Length::Fixed(38.0))
+                    .height(iced::Length::Fixed(38.0))
+                    .padding(4)
+                    .style(plus_btn_style)
+                    .on_press(TasksMessage::GoBack),
             ]
             .height(iced::Length::Shrink)
             .padding(4),
@@ -201,11 +240,13 @@ impl Tasks {
         data: &application::tree::node::NodeData,
     ) -> iced::Element<'a, TasksMessage> {
         let (right_btn_style, right_svg_style) =
-            crate::style::button_with_icon(crate::style::Variant::Danger, true);
-        let (plus_btn_style, plus_svg_style) =
-            crate::style::button_with_icon(crate::style::Variant::Warn, true);
+            crate::style::button_with_icon(crate::style::Variant::Default, true);
         let (minus_btn_style, minus_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Warn, true);
+        let (plus_btn_style, plus_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Ok, true);
+        let (delete_btn_style, delete_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Danger, true);
 
         iced::widget::container(iced::widget::row![
             iced::widget::text("(TODO)")
@@ -225,6 +266,15 @@ impl Tasks {
                 .padding(4)
                 .style(plus_btn_style)
                 .on_press(TasksMessage::GoBack),
+            iced::widget::space()
+                .height(iced::Length::Fill)
+                .width(iced::Length::Fixed(4.0)),
+            iced::widget::button(crate::icon::delete(delete_svg_style))
+                .width(iced::Length::Fixed(28.0))
+                .height(iced::Length::Fixed(28.0))
+                .padding(4)
+                .style(delete_btn_style)
+                .on_press(TasksMessage::DelNode(id.clone())),
             iced::widget::space()
                 .height(iced::Length::Fill)
                 .width(iced::Length::Fixed(4.0)),
@@ -254,7 +304,7 @@ impl Tasks {
                 .padding(4)
                 .style(plus_btn_style)
                 .on_press(TasksMessage::AddNode {
-                    parent: self.current_task.clone(),
+                    parent: self.current_task_id.clone(),
                     node_data: application::tree::node::NodeData::default(),
                 })
         ]

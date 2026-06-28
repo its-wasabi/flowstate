@@ -2,6 +2,7 @@ const RIGHT_BYTES: &[u8] = include_bytes!("../../assets/icons/right.svg");
 const LEFT_BYTES: &[u8] = include_bytes!("../../assets/icons/left.svg");
 const PLUS_BYTES: &[u8] = include_bytes!("../../assets/icons/plus.svg");
 const MINUS_BYTES: &[u8] = include_bytes!("../../assets/icons/minus.svg");
+const DELETE_BYTES: &[u8] = include_bytes!("../../assets/icons/delete.svg");
 
 fn make_icon<Message>(
     bytes: &'static [u8],
@@ -38,4 +39,10 @@ pub fn minus<Message>(
     style: impl Fn(&iced::Theme, iced::widget::svg::Status) -> iced::widget::svg::Style + 'static,
 ) -> iced::Element<'static, Message> {
     make_icon(MINUS_BYTES, style)
+}
+
+pub fn delete<Message>(
+    style: impl Fn(&iced::Theme, iced::widget::svg::Status) -> iced::widget::svg::Style + 'static,
+) -> iced::Element<'static, Message> {
+    make_icon(DELETE_BYTES, style)
 }
