@@ -135,7 +135,8 @@ impl Tasks {
         tree.get_node(&self.current_task).map_or_else(
             |_| None,
             |node_data| {
-                let (left_btn_style, left_svg_style) = crate::style::button_with_icon(true);
+                let (left_btn_style, left_svg_style) =
+                    crate::style::button_with_icon(crate::style::Variant::Default, true);
                 Some(
                     iced::widget::column![
                         iced::widget::row![
@@ -168,7 +169,8 @@ impl Tasks {
         id: automerge::ObjId,
         data: &application::tree::node::NodeData,
     ) -> iced::Element<'a, TasksMessage> {
-        let (left_btn_style, left_svg_style) = crate::style::button_with_icon(true);
+        let (left_btn_style, left_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Default, true);
         iced::widget::column![
             iced::widget::row![
                 iced::widget::button(crate::icon::left(left_svg_style))
@@ -198,9 +200,12 @@ impl Tasks {
         id: automerge::ObjId,
         data: &application::tree::node::NodeData,
     ) -> iced::Element<'a, TasksMessage> {
-        let (right_btn_style, right_svg_style) = crate::style::button_with_icon(true);
-        let (plus_btn_style, plus_svg_style) = crate::style::button_with_icon(true);
-        let (minus_btn_style, minus_svg_style) = crate::style::button_with_icon(true);
+        let (right_btn_style, right_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Danger, true);
+        let (plus_btn_style, plus_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Warn, true);
+        let (minus_btn_style, minus_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Ok, true);
 
         iced::widget::container(iced::widget::row![
             iced::widget::text("(TODO)")
@@ -238,7 +243,8 @@ impl Tasks {
     }
 
     fn add_task<'a>(&self) -> iced::Element<'a, TasksMessage> {
-        let (plus_btn_style, plus_svg_style) = crate::style::button_with_icon(false);
+        let (plus_btn_style, plus_svg_style) =
+            crate::style::button_with_icon(crate::style::Variant::Default, false);
 
         iced::widget::column![
             iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),

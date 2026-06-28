@@ -1,4 +1,5 @@
 pub fn tab_button_style(
+    variant: super::Variant,
     is_active: bool,
 ) -> impl Fn(&iced::Theme, iced::widget::button::Status) -> iced::widget::button::Style {
     move |theme, status| {
@@ -10,6 +11,7 @@ pub fn tab_button_style(
             } else {
                 status
             },
+            variant,
         );
         let background = background.map(std::convert::Into::into);
 
@@ -27,6 +29,7 @@ pub fn tab_button_style(
 }
 
 pub fn button_with_icon(
+    variant: super::Variant,
     border: bool,
 ) -> (
     impl Fn(&iced::Theme, iced::widget::button::Status) -> iced::widget::button::Style,
@@ -40,12 +43,11 @@ pub fn button_with_icon(
         let is_active = status == iced::widget::button::Status::Pressed;
         button_status.set(status);
         let palette = theme.palette();
-        let (background, text_color) = super::colors::button_colors(palette, status);
-        let background = background.map(std::convert::Into::into);
-        let border_color = super::colors::border_color(palette, is_active);
+        let (background, text_color) = super::colors::button_colors(palette, status, variant);
+        let border_color = super::colors::border_color(palette, variant, is_active);
 
         iced::widget::button::Style {
-            background,
+            background: background.map(std::convert::Into::into),
             text_color,
             border: iced::Border {
                 color: if border {
@@ -64,7 +66,7 @@ pub fn button_with_icon(
     let icon = move |theme: &iced::Theme, _: iced::widget::svg::Status| {
         let is_active = (svg_status.get() == iced::widget::button::Status::Pressed);
         let palette = theme.palette();
-        let icon_color = super::colors::icon_colors(palette, is_active);
+        let icon_color = super::colors::icon_colors(palette, variant, is_active);
 
         iced::widget::svg::Style {
             color: Some(icon_color),

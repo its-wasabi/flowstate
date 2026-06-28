@@ -66,7 +66,10 @@ impl Tab {
                 .on_press(AppMessage::TabChanged(tab))
                 .width(iced::Length::Fill)
                 .padding(3)
-                .style(style::tab_button_style(tab == self))
+                .style(style::tab_button_style(
+                    style::Variant::Default,
+                    tab == self,
+                ))
         };
 
         iced::widget::row![

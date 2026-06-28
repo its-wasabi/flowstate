@@ -9,12 +9,13 @@ pub const TOP_BAR_HEIGHT: f32 = 20.0;
 pub const DEFAULT_ASIDE_WIDTH: f32 = 280.0;
 pub const BORDER_WIDTH: f32 = 1.0;
 
-// pub enum Variant {
-//     Default,
-//     Danger,
-//     Warn,
-//     Ok,
-// }
+#[derive(Clone, Copy)]
+pub enum Variant {
+    Default,
+    Danger,
+    Warn,
+    Ok,
+}
 
 pub fn default_panel(theme: &iced::Theme) -> iced::widget::container::Style {
     let palette = theme.palette();
