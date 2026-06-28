@@ -115,8 +115,8 @@ impl Tasks {
                             self.current_task(tree),
                             iced::widget::scrollable(
                                 iced::widget::column(children_elements)
-                                    .spacing(4)
-                                    .padding(4),
+                                    .spacing(6)
+                                    .padding(6),
                             )
                             .style(scroll_style)
                             .height(iced::Length::Fill)
@@ -172,8 +172,8 @@ impl Tasks {
         iced::widget::column![
             iced::widget::row![
                 iced::widget::button(crate::icon::left(left_svg_style))
-                    .width(iced::Length::Fixed(34.0))
-                    .height(iced::Length::Fixed(34.0))
+                    .width(iced::Length::Fixed(38.0))
+                    .height(iced::Length::Fixed(38.0))
                     .padding(4)
                     .style(left_btn_style)
                     .on_press(TasksMessage::GoBack)
@@ -209,14 +209,14 @@ impl Tasks {
                 .align_x(iced::Alignment::Start)
                 .align_y(iced::Alignment::Center),
             iced::widget::button(crate::icon::minus(minus_svg_style))
-                .width(iced::Length::Fixed(24.0))
-                .height(iced::Length::Fixed(24.0))
+                .width(iced::Length::Fixed(28.0))
+                .height(iced::Length::Fixed(28.0))
                 .padding(4)
                 .style(minus_btn_style)
                 .on_press(TasksMessage::GoBack),
             iced::widget::button(crate::icon::plus(plus_svg_style))
-                .width(iced::Length::Fixed(24.0))
-                .height(iced::Length::Fixed(24.0))
+                .width(iced::Length::Fixed(28.0))
+                .height(iced::Length::Fixed(28.0))
                 .padding(4)
                 .style(plus_btn_style)
                 .on_press(TasksMessage::GoBack),
@@ -224,8 +224,8 @@ impl Tasks {
                 .height(iced::Length::Fill)
                 .width(iced::Length::Fixed(4.0)),
             iced::widget::button(crate::icon::right(right_svg_style))
-                .width(iced::Length::Fixed(24.0))
-                .height(iced::Length::Fixed(24.0))
+                .width(iced::Length::Fixed(28.0))
+                .height(iced::Length::Fixed(28.0))
                 .padding(4)
                 .style(right_btn_style)
                 .on_press(TasksMessage::GoNode(id))
@@ -233,7 +233,7 @@ impl Tasks {
         .style(crate::style::container(true))
         .width(iced::Length::Fill)
         .height(iced::Length::Shrink)
-        .padding(4)
+        .padding(6)
         .into()
     }
 
