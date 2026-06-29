@@ -59,7 +59,7 @@ impl crate::Display for Tasks {
 
             TasksMessage::AddNode { parent, node_data } => {
                 if core.tree.append_child(&parent, &node_data).is_err() {
-                    todo!("IMPLEMENT LOGGING WITH BUILD CFG");
+                    unimplemented!("Logging with build cfg")
                 }
             }
 

@@ -5,7 +5,6 @@
 // NOTE: You never send whole document even on startup only last known state and receive changes
 // since then
 
-#![allow(unused)]
 #![allow(clippy::missing_errors_doc)]
 
 pub mod analytics;
@@ -29,7 +28,7 @@ pub struct Core {
     pub config: config::Config,
     pub tree: tree::Tree,
 
-    sync: Option<peer::Peer>,
+    peer: Option<peer::Peer>,
 }
 
 impl Core {
@@ -42,7 +41,7 @@ impl Core {
         let mut tree: tree::Tree =
             storage.load_or_default(DOCUMENT_SAVE_PATH, io::storage::paths::StorageKind::Data)?;
 
-        let sync = if let Some(server_socket) = config.server_socket {
+        let peer = if let Some(server_socket) = config.server_socket {
             Some(peer::Peer::new(&mut tree.document, server_socket)?)
         } else {
             None
@@ -55,7 +54,7 @@ impl Core {
             config,
             tree,
 
-            sync,
+            peer,
         })
     }
 
@@ -78,7 +77,10 @@ impl Core {
 
 impl Drop for Core {
     fn drop(&mut self) {
-        self.save();
+        if self.save().is_err() {
+            unimplemented!("Logging with build cfg")
+        };
+
         self.storage.flush();
     }
 }
