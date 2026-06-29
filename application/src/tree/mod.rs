@@ -74,7 +74,7 @@ impl Tree {
             .ok_or(error::TreeError::MissingProperty)
     }
 
-    pub fn get_children(&self, id: &automerge::ObjId) -> error::Result<NodeContent> {
+    pub fn get_children(&self, id: &automerge::ObjId) -> error::Result<Option<NodeContent>> {
         let child_ids = self
             .projection
             .children
@@ -83,10 +83,14 @@ impl Tree {
             .unwrap_or_default();
 
         if child_ids.is_empty() {
-            Ok(NodeContent::Leaf((
-                id.clone(),
-                node::NodeData::from_doc(&self.document, id)?,
-            )))
+            if *id == automerge::ObjId::Root {
+                Ok(None)
+            } else {
+                Ok(Some(NodeContent::Leaf((
+                    id.clone(),
+                    node::NodeData::from_doc(&self.document, id)?,
+                ))))
+            }
         } else {
             let mut childrens = Vec::with_capacity(child_ids.len());
 
@@ -96,7 +100,7 @@ impl Tree {
                 }
             }
 
-            Ok(NodeContent::Inner(childrens))
+            Ok(Some(NodeContent::Inner(childrens)))
         }
     }
 

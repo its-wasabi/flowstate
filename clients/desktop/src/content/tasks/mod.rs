@@ -123,40 +123,36 @@ impl Tasks {
         )
     }
 
-    fn list_nodes<'a>(
-        &self,
-        tree: &application::tree::Tree,
-    ) -> Option<iced::Element<'a, TasksMessage>> {
-        tree.get_children(&self.current_node_id).map_or_else(
-            |_| None,
-            |children| {
-                Some(match children {
-                    application::tree::NodeContent::Leaf((node_id, node_data)) => {
-                        Self::leaf_node(node_id, &node_data)
-                    }
+    fn list_nodes<'a>(&self, tree: &application::tree::Tree) -> iced::Element<'a, TasksMessage> {
+        match tree.get_children(&self.current_node_id) {
+            Ok(Some(application::tree::NodeContent::Leaf((node_id, node_data)))) => {
+                Self::leaf_node(node_id, &node_data)
+            }
 
-                    application::tree::NodeContent::Inner(nodes) => {
-                        let mut children_elements: Vec<iced::Element<'a, TasksMessage>> =
-                            Vec::new();
-                        for (node_id, node_data) in nodes {
-                            children_elements.push(Self::inner_node(node_id, &node_data));
-                        }
+            Ok(Some(application::tree::NodeContent::Inner(children_nodes))) => {
+                let mut children_elements: Vec<iced::Element<'a, TasksMessage>> = Vec::new();
+                for (node_id, node_data) in children_nodes {
+                    children_elements.push(Self::inner_node(node_id, &node_data));
+                }
 
-                        iced::widget::column![
-                            self.current_node(tree),
-                            iced::widget::scrollable(
-                                iced::widget::column(children_elements)
-                                    .spacing(6)
-                                    .padding(6),
-                            )
-                            .style(crate::style::scroll)
-                            .height(iced::Length::Fill)
-                        ]
-                        .into()
-                    }
-                })
-            },
-        )
+                iced::widget::column![
+                    self.current_node(tree),
+                    iced::widget::scrollable(
+                        iced::widget::column(children_elements)
+                            .spacing(6)
+                            .padding(6),
+                    )
+                    .style(crate::style::scroll)
+                    .height(iced::Length::Fill)
+                ]
+                .into()
+            }
+
+            _ => iced::widget::space()
+                .width(iced::Length::Fill)
+                .height(iced::Length::Fill)
+                .into(),
+        }
     }
 
     fn current_node<'a>(
