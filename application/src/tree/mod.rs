@@ -22,28 +22,15 @@ pub const NODE_TASK_TOTAL: &str = "t";
 /// Number of completed tasks for that node
 pub const NODE_TASK_COMPLETED: &str = "c";
 
-pub enum NodeContent {
-    Leaf((automerge::ObjId, node::NodeData)),
-    Inner(Vec<(automerge::ObjId, node::NodeData)>),
-}
-
 #[derive(Debug)]
 pub struct Tree {
     pub document: automerge::Automerge,
     projection: projection::Projection,
 }
 
-impl crate::io::storage::FromBytes for Tree {
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
-        let document = automerge::Automerge::load(bytes)?;
-        let cached_heads = document.get_heads();
-        let projection = projection::Projection::new(&document)?;
-
-        Ok(Self {
-            document,
-            projection,
-        })
-    }
+pub enum NodeContent {
+    Leaf((automerge::ObjId, node::NodeData)),
+    Inner(Vec<(automerge::ObjId, node::NodeData)>),
 }
 
 impl Tree {
@@ -60,16 +47,7 @@ impl Tree {
             projection,
         })
     }
-}
 
-impl Default for Tree {
-    fn default() -> Self {
-        #[allow(clippy::expect_used)]
-        Self::new().expect("failed to initialize root CHILDREN list on a fresh document")
-    }
-}
-
-impl Tree {
     pub fn sync(&mut self) -> error::Result<()> {
         let current_heads = self.document.get_heads();
         if self.projection.changes != current_heads {
@@ -79,9 +57,7 @@ impl Tree {
 
         Ok(())
     }
-}
 
-impl Tree {
     pub fn is_leaf(&self, id: &automerge::ObjId) -> error::Result<bool> {
         Ok(self
             .projection
@@ -89,9 +65,7 @@ impl Tree {
             .get(id)
             .is_none_or(std::vec::Vec::is_empty))
     }
-}
 
-impl Tree {
     pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<node::NodeData> {
         self.projection
             .nodes
@@ -125,9 +99,7 @@ impl Tree {
             Ok(NodeContent::Inner(childrens))
         }
     }
-}
 
-impl Tree {
     pub fn get_parent(&self, id: &automerge::ObjId) -> error::Result<automerge::ObjId> {
         let mut parents = self.document.parents(id)?;
         parents.next().ok_or(error::TreeError::MissingProperty)?;
@@ -142,9 +114,7 @@ impl Tree {
 
         self.get_node(id).map(|n| n.progress)
     }
-}
 
-impl Tree {
     pub fn append_child(
         &mut self,
         parent_id: &automerge::ObjId,
@@ -163,9 +133,7 @@ impl Tree {
 
         Ok(new_node_id)
     }
-}
 
-impl Tree {
     pub fn delete(&mut self, id: &automerge::ObjId) -> error::Result<()> {
         let mut parents = self.document.parents(id)?;
         let parent_list = parents.next().ok_or(error::TreeError::MissingProperty)?;
@@ -179,9 +147,7 @@ impl Tree {
 
         Ok(())
     }
-}
 
-impl Tree {
     pub fn change_node_name(&mut self, id: &automerge::ObjId, name: String) -> error::Result<()> {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_NAME, name)?;
@@ -211,9 +177,7 @@ impl Tree {
     pub fn change_node_total_cache(&mut self, id: &automerge::ObjId, total: u32) {
         self.projection.update_node_total(id, total);
     }
-}
 
-impl Tree {
     pub fn change_node_total(&mut self, id: &automerge::ObjId, total: u32) -> error::Result<()> {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_TASK_TOTAL, total)?;
@@ -267,5 +231,25 @@ impl Tree {
         }
 
         Ok(())
+    }
+}
+
+impl Default for Tree {
+    fn default() -> Self {
+        #[allow(clippy::expect_used)]
+        Self::new().expect("failed to initialize root CHILDREN list on a fresh document")
+    }
+}
+
+impl crate::io::storage::FromBytes for Tree {
+    fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
+        let document = automerge::Automerge::load(bytes)?;
+        let cached_heads = document.get_heads();
+        let projection = projection::Projection::new(&document)?;
+
+        Ok(Self {
+            document,
+            projection,
+        })
     }
 }

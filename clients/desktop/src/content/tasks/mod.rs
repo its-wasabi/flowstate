@@ -1,22 +1,33 @@
 pub struct Tasks {
-    current_task_id: automerge::ObjId,
+    current_node_id: automerge::ObjId,
 }
 
+// TODO: Try using ref for id
 #[derive(Debug, Clone)]
 pub enum TasksMessage {
     GoBack,
     GoNode(automerge::ObjId),
+    DelNode(automerge::ObjId),
     AddNode {
         parent: automerge::ObjId,
         node_data: application::tree::node::NodeData,
     },
-    DelNode(automerge::ObjId),
+
+    NodeNameChange {
+        id: automerge::ObjId,
+        content: String,
+    },
+
+    NodeDescChange {
+        id: automerge::ObjId,
+        content: String,
+    },
 }
 
 impl Tasks {
     pub const fn new() -> Self {
         Self {
-            current_task_id: automerge::ObjId::Root,
+            current_node_id: automerge::ObjId::Root,
         }
     }
 }
@@ -28,27 +39,38 @@ impl crate::Display for Tasks {
         match message {
             TasksMessage::GoBack => {
                 println!("GoBack");
-                if let Ok(parent) = core.tree.get_parent(&self.current_task_id) {
-                    self.current_task_id = parent;
+                if let Ok(parent) = core.tree.get_parent(&self.current_node_id) {
+                    self.current_node_id = parent;
                 } else {
                     println!("FAIL");
                 }
             }
 
-            TasksMessage::GoNode(id) => self.current_task_id = id,
+            TasksMessage::GoNode(id) => self.current_node_id = id,
 
-            TasksMessage::AddNode { parent, node_data } => {
-                core.tree
-                    .append_child(&parent, &node_data)
-                    .expect("Failed to add child");
-            }
             TasksMessage::DelNode(id) => {
                 core.tree.delete(&id);
-                if id == self.current_task_id
-                    && let Ok(parent) = core.tree.get_parent(&self.current_task_id)
+                if id == self.current_node_id
+                    && let Ok(parent) = core.tree.get_parent(&self.current_node_id)
                 {
-                    self.current_task_id = parent;
+                    self.current_node_id = parent;
                 }
+            }
+
+            TasksMessage::AddNode { parent, node_data } => {
+                if core.tree.append_child(&parent, &node_data).is_err() {
+                    todo!("IMPLEMENT LOGGING WITH BUILD CFG");
+                }
+            }
+
+            TasksMessage::NodeNameChange { id, content } => {
+                // FIX: Change to cache function - now it spams automerge with changes
+                core.tree.change_node_name(&id, content);
+            }
+
+            TasksMessage::NodeDescChange { id, content } => {
+                // FIX: Change to cache function - now it spams automerge with changes
+                core.tree.change_node_desc(&id, content);
             }
         }
     }
@@ -56,8 +78,8 @@ impl crate::Display for Tasks {
     fn view_center(&self, core: &application::Core) -> iced::Element<'_, Self::Message> {
         iced::widget::column![
             self.current_progress(&core.tree),
-            self.list_tasks(&core.tree),
-            self.add_task()
+            self.list_nodes(&core.tree),
+            self.add_node()
         ]
         .width(iced::Length::Fill)
         .height(iced::Length::Fill)
@@ -79,7 +101,7 @@ impl Tasks {
         &self,
         tree: &application::tree::Tree,
     ) -> Option<iced::Element<'a, TasksMessage>> {
-        tree.get_progress(&self.current_task_id).map_or_else(
+        tree.get_progress(&self.current_node_id).map_or_else(
             |_| None,
             |progress| {
                 Some(
@@ -101,11 +123,11 @@ impl Tasks {
         )
     }
 
-    fn list_tasks<'a>(
+    fn list_nodes<'a>(
         &self,
         tree: &application::tree::Tree,
     ) -> Option<iced::Element<'a, TasksMessage>> {
-        tree.get_children(&self.current_task_id).map_or_else(
+        tree.get_children(&self.current_node_id).map_or_else(
             |_| None,
             |children| {
                 Some(match children {
@@ -121,7 +143,7 @@ impl Tasks {
                         }
 
                         iced::widget::column![
-                            self.current_task(tree),
+                            self.current_node(tree),
                             iced::widget::scrollable(
                                 iced::widget::column(children_elements)
                                     .spacing(6)
@@ -137,11 +159,11 @@ impl Tasks {
         )
     }
 
-    fn current_task<'a>(
+    fn current_node<'a>(
         &self,
         tree: &application::tree::Tree,
     ) -> Option<iced::Element<'a, TasksMessage>> {
-        tree.get_node(&self.current_task_id).map_or_else(
+        tree.get_node(&self.current_node_id).map_or_else(
             |_| None,
             |node_data| {
                 let (left_btn_style, left_svg_style) =
@@ -159,8 +181,36 @@ impl Tasks {
                                 .height(iced::Length::Fill)
                                 .width(iced::Length::Fixed(4.0)),
                             iced::widget::column![
-                                iced::widget::text(node_data.name),
-                                iced::widget::text(node_data.desc),
+                                iced::widget::text_input("NAME", &node_data.name)
+                                    .width(iced::Length::Fill)
+                                    .line_height(iced::widget::text::LineHeight::Absolute(
+                                        iced::Pixels(14.0)
+                                    ))
+                                    .padding(5)
+                                    .align_x(iced::Alignment::Start)
+                                    .on_input({
+                                        let id = self.current_node_id.clone();
+                                        move |content| TasksMessage::NodeNameChange {
+                                            id: id.clone(),
+                                            content,
+                                        }
+                                    })
+                                    .style(crate::style::text_input),
+                                iced::widget::text_input("DESC", &node_data.desc)
+                                    .width(iced::Length::Fill)
+                                    .line_height(iced::widget::text::LineHeight::Absolute(
+                                        iced::Pixels(14.0)
+                                    ))
+                                    .padding(5)
+                                    .align_x(iced::Alignment::Start)
+                                    .on_input({
+                                        let id = self.current_node_id.clone();
+                                        move |content| TasksMessage::NodeDescChange {
+                                            id: id.clone(),
+                                            content,
+                                        }
+                                    })
+                                    .style(crate::style::text_input),
                             ]
                         ]
                         .padding(4),
@@ -223,7 +273,7 @@ impl Tasks {
             .padding(4),
             iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),
             iced::widget::container(
-                iced::widget::text("(TODO)")
+                iced::widget::text(data.desc.clone())
                     .width(iced::Length::Fill)
                     .height(iced::Length::Fill)
                     .align_x(iced::Alignment::Center)
@@ -249,11 +299,19 @@ impl Tasks {
             crate::style::button_with_icon(crate::style::Variant::Danger, true);
 
         iced::widget::container(iced::widget::row![
-            iced::widget::text("(TODO)")
+            iced::widget::text_input("NAME", &data.name)
                 .width(iced::Length::Fill)
-                .height(iced::Length::Fill)
+                .line_height(iced::widget::text::LineHeight::Absolute(iced::Pixels(18.0)))
+                .padding(5)
                 .align_x(iced::Alignment::Start)
-                .align_y(iced::Alignment::Center),
+                .on_input({
+                    let id = id.clone();
+                    move |content| TasksMessage::NodeNameChange {
+                        id: id.clone(),
+                        content,
+                    }
+                })
+                .style(crate::style::text_input),
             iced::widget::button(crate::icon::minus(minus_svg_style))
                 .width(iced::Length::Fixed(28.0))
                 .height(iced::Length::Fixed(28.0))
@@ -292,7 +350,7 @@ impl Tasks {
         .into()
     }
 
-    fn add_task<'a>(&self) -> iced::Element<'a, TasksMessage> {
+    fn add_node<'a>(&self) -> iced::Element<'a, TasksMessage> {
         let (plus_btn_style, plus_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Default, false);
 
@@ -304,7 +362,7 @@ impl Tasks {
                 .padding(4)
                 .style(plus_btn_style)
                 .on_press(TasksMessage::AddNode {
-                    parent: self.current_task_id.clone(),
+                    parent: self.current_node_id.clone(),
                     node_data: application::tree::node::NodeData::default(),
                 })
         ]

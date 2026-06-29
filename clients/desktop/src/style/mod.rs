@@ -61,9 +61,21 @@ pub fn container(border: bool) -> impl Fn(&iced::Theme) -> iced::widget::contain
     }
 }
 
-pub fn icon(theme: &iced::Theme, status: iced::widget::svg::Status) -> iced::widget::svg::Style {
+pub fn text_input(
+    theme: &iced::Theme,
+    status: iced::widget::text_input::Status,
+) -> iced::widget::text_input::Style {
     let palette = theme.palette();
-    iced::widget::svg::Style {
-        color: Some(palette.text),
+    iced::widget::text_input::Style {
+        background: palette.background.into(),
+        border: iced::Border {
+            color: iced::Color::TRANSPARENT,
+            width: 0.0,
+            radius: iced::border::Radius::new(0),
+        },
+        icon: palette.primary,
+        placeholder: colors::lerp_color(palette.background, palette.text, 0.3),
+        value: palette.text,
+        selection: palette.primary,
     }
 }
