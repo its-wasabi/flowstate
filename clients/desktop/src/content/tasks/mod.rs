@@ -149,7 +149,7 @@ impl Tasks {
                                     .spacing(6)
                                     .padding(6),
                             )
-                            .style(scroll_style)
+                            .style(crate::style::scroll)
                             .height(iced::Length::Fill)
                         ]
                         .into()
@@ -172,21 +172,21 @@ impl Tasks {
                     iced::widget::column![
                         iced::widget::row![
                             iced::widget::button(crate::icon::left(left_svg_style))
-                                .width(iced::Length::Fixed(48.0))
-                                .height(iced::Length::Fixed(48.0))
-                                .padding(4)
+                                .width(iced::Length::Fixed(crate::style::BIG_BUTTON_SIZE))
+                                .height(iced::Length::Fixed(crate::style::BIG_BUTTON_SIZE))
+                                .padding(crate::style::PADDING)
                                 .style(left_btn_style)
                                 .on_press(TasksMessage::GoBack),
                             iced::widget::space()
                                 .height(iced::Length::Fill)
-                                .width(iced::Length::Fixed(4.0)),
+                                .width(iced::Length::Fixed(crate::style::PADDING)),
                             iced::widget::column![
                                 iced::widget::text_input("NAME", &node_data.name)
                                     .width(iced::Length::Fill)
                                     .line_height(iced::widget::text::LineHeight::Absolute(
-                                        iced::Pixels(14.0)
+                                        iced::Pixels(crate::style::BIG_BUTTON_SIZE / 2.0)
                                     ))
-                                    .padding(5)
+                                    .padding(0)
                                     .align_x(iced::Alignment::Start)
                                     .on_input({
                                         let id = self.current_node_id.clone();
@@ -199,9 +199,9 @@ impl Tasks {
                                 iced::widget::text_input("DESC", &node_data.desc)
                                     .width(iced::Length::Fill)
                                     .line_height(iced::widget::text::LineHeight::Absolute(
-                                        iced::Pixels(14.0)
+                                        iced::Pixels(crate::style::BIG_BUTTON_SIZE / 2.0)
                                     ))
-                                    .padding(5)
+                                    .padding(0)
                                     .align_x(iced::Alignment::Start)
                                     .on_input({
                                         let id = self.current_node_id.clone();
@@ -213,7 +213,7 @@ impl Tasks {
                                     .style(crate::style::text_input),
                             ]
                         ]
-                        .padding(4),
+                        .padding(crate::style::PADDING),
                         iced::widget::rule::horizontal(crate::style::BORDER_WIDTH)
                             .style(crate::style::border)
                     ]
@@ -239,38 +239,38 @@ impl Tasks {
         iced::widget::column![
             iced::widget::row![
                 iced::widget::button(crate::icon::left(left_svg_style))
-                    .width(iced::Length::Fixed(38.0))
-                    .height(iced::Length::Fixed(38.0))
-                    .padding(4)
+                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .padding(crate::style::PADDING)
                     .style(left_btn_style)
                     .on_press(TasksMessage::GoBack),
                 iced::widget::space()
                     .height(iced::Length::Fill)
-                    .width(iced::Length::Fixed(4.0)),
+                    .width(iced::Length::Fixed(crate::style::PADDING)),
                 iced::widget::button(crate::icon::delete(delete_svg_style))
-                    .width(iced::Length::Fixed(38.0))
-                    .height(iced::Length::Fixed(38.0))
-                    .padding(4)
+                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .padding(crate::style::PADDING)
                     .style(delete_btn_style)
                     .on_press(TasksMessage::DelNode(id)),
                 iced::widget::space()
                     .height(iced::Length::Fill)
-                    .width(iced::Length::Fixed(4.0)),
+                    .width(iced::Length::Fixed(crate::style::PADDING)),
                 iced::widget::button(crate::icon::minus(minus_svg_style))
-                    .width(iced::Length::Fixed(38.0))
-                    .height(iced::Length::Fixed(38.0))
-                    .padding(4)
+                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .padding(crate::style::PADDING)
                     .style(minus_btn_style)
                     .on_press(TasksMessage::GoBack),
                 iced::widget::button(crate::icon::plus(plus_svg_style))
-                    .width(iced::Length::Fixed(38.0))
-                    .height(iced::Length::Fixed(38.0))
-                    .padding(4)
+                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .padding(crate::style::PADDING)
                     .style(plus_btn_style)
                     .on_press(TasksMessage::GoBack),
             ]
             .height(iced::Length::Shrink)
-            .padding(4),
+            .padding(crate::style::PADDING),
             iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),
             iced::widget::container(
                 iced::widget::text(data.desc.clone())
@@ -301,8 +301,10 @@ impl Tasks {
         iced::widget::container(iced::widget::row![
             iced::widget::text_input("NAME", &data.name)
                 .width(iced::Length::Fill)
-                .line_height(iced::widget::text::LineHeight::Absolute(iced::Pixels(18.0)))
-                .padding(5)
+                .line_height(iced::widget::text::LineHeight::Absolute(iced::Pixels(
+                    crate::style::SMALL_BUTTON_SIZE
+                )))
+                .padding(0)
                 .align_x(iced::Alignment::Start)
                 .on_input({
                     let id = id.clone();
@@ -313,33 +315,33 @@ impl Tasks {
                 })
                 .style(crate::style::text_input),
             iced::widget::button(crate::icon::minus(minus_svg_style))
-                .width(iced::Length::Fixed(28.0))
-                .height(iced::Length::Fixed(28.0))
-                .padding(4)
+                .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                .padding(crate::style::PADDING)
                 .style(minus_btn_style)
                 .on_press(TasksMessage::GoBack),
             iced::widget::button(crate::icon::plus(plus_svg_style))
-                .width(iced::Length::Fixed(28.0))
-                .height(iced::Length::Fixed(28.0))
-                .padding(4)
+                .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                .padding(crate::style::PADDING)
                 .style(plus_btn_style)
                 .on_press(TasksMessage::GoBack),
             iced::widget::space()
                 .height(iced::Length::Fill)
-                .width(iced::Length::Fixed(4.0)),
+                .width(iced::Length::Fixed(crate::style::PADDING)),
             iced::widget::button(crate::icon::delete(delete_svg_style))
-                .width(iced::Length::Fixed(28.0))
-                .height(iced::Length::Fixed(28.0))
-                .padding(4)
+                .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                .padding(crate::style::PADDING)
                 .style(delete_btn_style)
                 .on_press(TasksMessage::DelNode(id.clone())),
             iced::widget::space()
                 .height(iced::Length::Fill)
-                .width(iced::Length::Fixed(4.0)),
+                .width(iced::Length::Fixed(crate::style::PADDING)),
             iced::widget::button(crate::icon::right(right_svg_style))
-                .width(iced::Length::Fixed(28.0))
-                .height(iced::Length::Fixed(28.0))
-                .padding(4)
+                .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                .padding(crate::style::PADDING)
                 .style(right_btn_style)
                 .on_press(TasksMessage::GoNode(id))
         ])
@@ -369,63 +371,5 @@ impl Tasks {
         .width(iced::Length::Fill)
         .height(iced::Length::Fixed(24.0))
         .into()
-    }
-}
-
-fn scroll_style(
-    _theme: &iced::Theme,
-    status: iced::widget::scrollable::Status,
-) -> iced::widget::scrollable::Style {
-    let (width, handle) = match status {
-        iced::widget::scrollable::Status::Hovered { .. } => (
-            32.0,
-            iced::Background::Color(iced::Color::from_rgb8(180, 180, 180)),
-        ),
-        iced::widget::scrollable::Status::Dragged { .. } => {
-            (8.0, iced::Background::Color(iced::Color::WHITE))
-        }
-        iced::widget::scrollable::Status::Active { .. } => (
-            8.0,
-            iced::Background::Color(iced::Color::from_rgba8(255, 255, 255, 0.4)),
-        ),
-    };
-
-    iced::widget::scrollable::Style {
-        container: iced::widget::container::Style::default(),
-
-        vertical_rail: iced::widget::scrollable::Rail {
-            background: Some(iced::Background::Color(iced::Color::TRANSPARENT)),
-            border: iced::Border::default(),
-            scroller: iced::widget::scrollable::Scroller {
-                background: handle,
-                border: iced::Border {
-                    radius: 0.0.into(),
-                    width,
-                    ..Default::default()
-                },
-            },
-        },
-
-        horizontal_rail: iced::widget::scrollable::Rail {
-            background: Some(iced::Background::Color(iced::Color::TRANSPARENT)),
-            border: iced::Border::default(),
-            scroller: iced::widget::scrollable::Scroller {
-                background: handle,
-                border: iced::Border {
-                    radius: 0.0.into(),
-                    width,
-                    ..Default::default()
-                },
-            },
-        },
-
-        gap: None,
-
-        auto_scroll: iced::widget::scrollable::AutoScroll {
-            background: iced::Background::Color(iced::Color::TRANSPARENT),
-            border: iced::Border::default(),
-            shadow: iced::Shadow::default(),
-            icon: iced::Color::TRANSPARENT,
-        },
     }
 }
