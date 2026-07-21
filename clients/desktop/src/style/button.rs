@@ -66,7 +66,7 @@ pub fn button_with_icon(
     let icon = move |theme: &iced::Theme, _: iced::widget::svg::Status| {
         let is_active = (svg_status.get() == iced::widget::button::Status::Pressed);
         let palette = theme.palette();
-        let icon_color = super::colors::icon_colors(palette, variant, is_active);
+        let icon_color = super::colors::icon_color(palette, variant, is_active);
 
         iced::widget::svg::Style {
             color: Some(icon_color),

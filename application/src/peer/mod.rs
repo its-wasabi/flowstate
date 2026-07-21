@@ -12,7 +12,7 @@ impl Peer {
         document: &mut automerge::Automerge,
         socket_addr: std::net::SocketAddr,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut local_peer_state = automerge::sync::State::new();
+        let local_peer_state = automerge::sync::State::new();
         let server_uri = tokio_tungstenite::tungstenite::http::Uri::builder()
             .scheme("ws")
             .authority(socket_addr.to_string())

@@ -2,7 +2,6 @@ pub struct Tasks {
     current_node_id: automerge::ObjId,
 }
 
-// TODO: Try using ref for id
 #[derive(Debug, Clone)]
 pub enum TasksMessage {
     GoBack,
@@ -97,10 +96,10 @@ impl crate::Display for Tasks {
 }
 
 impl Tasks {
-    fn current_progress<'a>(
+    fn current_progress(
         &self,
         tree: &application::tree::Tree,
-    ) -> Option<iced::Element<'a, TasksMessage>> {
+    ) -> Option<iced::Element<'_, TasksMessage>> {
         tree.get_progress(&self.current_node_id).map_or_else(
             |_| None,
             |progress| {
@@ -144,6 +143,10 @@ impl Tasks {
                     )
                     .style(crate::style::scroll)
                     .height(iced::Length::Fill)
+                    .auto_scroll(true)
+                    .direction(iced::widget::scrollable::Direction::Vertical(
+                        iced::widget::scrollable::Scrollbar::hidden()
+                    ))
                 ]
                 .into()
             }
@@ -159,6 +162,9 @@ impl Tasks {
         &self,
         tree: &application::tree::Tree,
     ) -> Option<iced::Element<'a, TasksMessage>> {
+        let name_id = self.current_node_id.clone();
+        let desc_id = self.current_node_id.clone();
+
         tree.get_node(&self.current_node_id).map_or_else(
             |_| None,
             |node_data| {
@@ -184,12 +190,9 @@ impl Tasks {
                                     ))
                                     .padding(0)
                                     .align_x(iced::Alignment::Start)
-                                    .on_input({
-                                        let id = self.current_node_id.clone();
-                                        move |content| TasksMessage::NodeNameChange {
-                                            id: id.clone(),
-                                            content,
-                                        }
+                                    .on_input(move |content| TasksMessage::NodeNameChange {
+                                        id: name_id.clone(),
+                                        content,
                                     })
                                     .style(crate::style::text_input),
                                 iced::widget::text_input("DESC", &node_data.desc)
@@ -199,12 +202,9 @@ impl Tasks {
                                     ))
                                     .padding(0)
                                     .align_x(iced::Alignment::Start)
-                                    .on_input({
-                                        let id = self.current_node_id.clone();
-                                        move |content| TasksMessage::NodeDescChange {
-                                            id: id.clone(),
-                                            content,
-                                        }
+                                    .on_input(move |content| TasksMessage::NodeDescChange {
+                                        id: desc_id.clone(),
+                                        content,
                                     })
                                     .style(crate::style::text_input),
                             ]
@@ -232,6 +232,10 @@ impl Tasks {
             crate::style::button_with_icon(crate::style::Variant::Ok, true);
         let (delete_btn_style, delete_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Danger, true);
+
+        let name_id = id.clone();
+        let desc_id = id.clone();
+
         iced::widget::column![
             iced::widget::row![
                 iced::widget::button(crate::icon::left(left_svg_style))
@@ -294,6 +298,8 @@ impl Tasks {
         let (delete_btn_style, delete_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Danger, true);
 
+        let name_id = id.clone();
+
         iced::widget::container(iced::widget::row![
             iced::widget::text_input("NAME", &data.name)
                 .width(iced::Length::Fill)
@@ -302,12 +308,9 @@ impl Tasks {
                 )))
                 .padding(0)
                 .align_x(iced::Alignment::Start)
-                .on_input({
-                    let id = id.clone();
-                    move |content| TasksMessage::NodeNameChange {
-                        id: id.clone(),
-                        content,
-                    }
+                .on_input(move |content| TasksMessage::NodeNameChange {
+                    id: name_id.clone(),
+                    content,
                 })
                 .style(crate::style::text_input),
             iced::widget::button(crate::icon::minus(minus_svg_style))

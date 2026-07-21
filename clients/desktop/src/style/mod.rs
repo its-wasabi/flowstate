@@ -86,35 +86,32 @@ pub fn text_input(
 }
 
 pub fn scroll(
-    _theme: &iced::Theme,
+    theme: &iced::Theme,
     status: iced::widget::scrollable::Status,
 ) -> iced::widget::scrollable::Style {
-    let (width, handle) = match status {
-        iced::widget::scrollable::Status::Hovered { .. } => (
-            32.0,
-            iced::Background::Color(iced::Color::from_rgb8(180, 180, 180)),
-        ),
-        iced::widget::scrollable::Status::Dragged { .. } => {
-            (8.0, iced::Background::Color(iced::Color::WHITE))
-        }
-        iced::widget::scrollable::Status::Active { .. } => (
-            8.0,
-            iced::Background::Color(iced::Color::from_rgba8(255, 255, 255, 0.4)),
-        ),
-    };
+    let palette = theme.palette();
+    let (vertical_bar, horizontal_bar) = colors::scroll_colors(palette, status);
 
     iced::widget::scrollable::Style {
-        container: iced::widget::container::Style::default(),
+        container: iced::widget::container::Style {
+            background: None,
+            ..Default::default()
+        },
 
         vertical_rail: iced::widget::scrollable::Rail {
-            background: Some(iced::Background::Color(iced::Color::TRANSPARENT)),
-            border: iced::Border::default(),
+            background: None,
+            border: iced::Border {
+                color: iced::Color::TRANSPARENT,
+                width: vertical_bar.0,
+                radius: iced::border::Radius::new(0),
+            },
+
             scroller: iced::widget::scrollable::Scroller {
-                background: handle,
+                background: iced::Color::from_rgb8(255, 0, 255).into(),
                 border: iced::Border {
-                    radius: 0.0.into(),
-                    width,
-                    ..Default::default()
+                    radius: iced::border::Radius::new(0),
+                    width: vertical_bar.0,
+                    color: vertical_bar.1,
                 },
             },
         },
@@ -123,10 +120,10 @@ pub fn scroll(
             background: Some(iced::Background::Color(iced::Color::TRANSPARENT)),
             border: iced::Border::default(),
             scroller: iced::widget::scrollable::Scroller {
-                background: handle,
+                background: horizontal_bar.1.into(),
                 border: iced::Border {
                     radius: 0.0.into(),
-                    width,
+                    width: horizontal_bar.0,
                     ..Default::default()
                 },
             },

@@ -6,10 +6,7 @@ pub mod node;
 mod projection;
 pub(crate) mod sync;
 
-use crate::tree::error::TreeError;
 use automerge::{ReadDoc, transaction::Transactable};
-pub use node::NodeData;
-use std::collections::HashMap;
 
 /// List of all children of that object
 pub const CHILDREN: &str = "l";

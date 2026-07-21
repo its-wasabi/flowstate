@@ -1,6 +1,5 @@
 use automerge::ReadDoc;
 use rustc_hash::{FxHashMap, FxHashSet};
-use serde_json::de;
 
 #[derive(Debug)]
 pub struct Projection {

@@ -68,7 +68,7 @@ pub(super) fn button_colors(
     }
 }
 
-pub(super) const fn icon_colors(
+pub(super) const fn icon_color(
     palette: iced::theme::Palette,
     variant: super::Variant,
     is_active: bool,
@@ -77,5 +77,81 @@ pub(super) const fn icon_colors(
         palette.background
     } else {
         variant_color(palette, variant, palette.primary)
+    }
+}
+
+const SCROLLER_ALPHA: f32 = 0.6;
+pub(super) fn scroll_colors(
+    palette: iced::theme::Palette,
+    status: iced::widget::scrollable::Status,
+) -> ((f32, iced::Color), (f32, iced::Color)) {
+    match status {
+        iced::widget::scrollable::Status::Active {
+            is_horizontal_scrollbar_disabled,
+            is_vertical_scrollbar_disabled,
+        } => (
+            (
+                10.0,
+                if is_vertical_scrollbar_disabled {
+                    lerp_color(palette.background, palette.text, 0.3)
+                } else {
+                    palette.primary.scale_alpha(SCROLLER_ALPHA)
+                },
+            ),
+            (
+                10.0,
+                if is_horizontal_scrollbar_disabled {
+                    lerp_color(palette.background, palette.text, 0.3)
+                } else {
+                    palette.primary.scale_alpha(SCROLLER_ALPHA)
+                },
+            ),
+        ),
+
+        iced::widget::scrollable::Status::Hovered {
+            is_horizontal_scrollbar_hovered,
+            is_vertical_scrollbar_hovered,
+            ..
+        } => (
+            (
+                if is_vertical_scrollbar_hovered {
+                    20.0
+                } else {
+                    10.0
+                },
+                palette.primary.scale_alpha(SCROLLER_ALPHA),
+            ),
+            (
+                if is_horizontal_scrollbar_hovered {
+                    20.0
+                } else {
+                    10.0
+                },
+                palette.primary.scale_alpha(SCROLLER_ALPHA),
+            ),
+        ),
+
+        iced::widget::scrollable::Status::Dragged {
+            is_horizontal_scrollbar_dragged,
+            is_vertical_scrollbar_dragged,
+            ..
+        } => (
+            (
+                20.0,
+                if is_vertical_scrollbar_dragged {
+                    palette.primary
+                } else {
+                    palette.primary.scale_alpha(SCROLLER_ALPHA)
+                },
+            ),
+            (
+                20.0,
+                if is_horizontal_scrollbar_dragged {
+                    palette.primary
+                } else {
+                    palette.primary.scale_alpha(SCROLLER_ALPHA)
+                },
+            ),
+        ),
     }
 }
