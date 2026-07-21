@@ -38,6 +38,19 @@ pub fn accent_panel(theme: &iced::Theme) -> iced::widget::container::Style {
     }
 }
 
+pub fn text(lerp: bool) -> impl Fn(&iced::Theme) -> iced::widget::text::Style {
+    move |theme| {
+        let palette = theme.palette();
+        iced::widget::text::Style {
+            color: Some(if lerp {
+                colors::lerp_color(palette.text, palette.background, 0.6)
+            } else {
+                palette.text
+            }),
+        }
+    }
+}
+
 pub fn progress(theme: &iced::Theme) -> iced::widget::progress_bar::Style {
     let palette = theme.palette();
     iced::widget::progress_bar::Style {

@@ -1,10 +1,7 @@
-// IMPORTANT: Instead of update_up_from try to extract update patch or some change log from
-// automerge transaction commit and apply it with apply_patches method for Projection
-
+pub mod analytics;
 pub mod error;
 pub mod node;
 mod projection;
-pub(crate) mod sync;
 
 use automerge::{ReadDoc, transaction::Transactable};
 
@@ -22,12 +19,26 @@ pub const NODE_TASK_COMPLETED: &str = "c";
 #[derive(Debug)]
 pub struct Tree {
     pub document: automerge::Automerge,
-    projection: projection::Projection,
+
+    pub projection: projection::Projection,
+    pub analytics: analytics::Analytics,
 }
 
 pub enum NodeContent {
-    Leaf((automerge::ObjId, node::NodeData)),
-    Inner(Vec<(automerge::ObjId, node::NodeData)>),
+    Root {
+        children: Vec<(automerge::ObjId, node::NodeData)>,
+    },
+
+    Leaf {
+        id: automerge::ObjId,
+        node: node::NodeData,
+    },
+
+    Inner {
+        id: automerge::ObjId,
+        node: node::NodeData,
+        children: Vec<(automerge::ObjId, node::NodeData)>,
+    },
 }
 
 impl Tree {
@@ -35,43 +46,100 @@ impl Tree {
         let mut document = automerge::Automerge::new();
         let mut tx = document.transaction();
         tx.put_object(automerge::ObjId::Root, CHILDREN, automerge::ObjType::List)?;
-        tx.commit();
+        tx.commit_with(
+            automerge::transaction::CommitOptions::default()
+                .with_time(chrono::Utc::now().timestamp_millis()),
+        );
 
         let projection = projection::Projection::new(&document)?;
+        let analytics = analytics::Analytics::new(&document);
 
         Ok(Self {
             document,
+
             projection,
+            analytics,
         })
     }
 
     pub fn sync(&mut self) -> error::Result<()> {
-        let current_heads = self.document.get_heads();
-        if self.projection.changes != current_heads {
-            let patches = self.document.diff(&self.projection.changes, &current_heads);
-            self.projection.apply_patches(&self.document, patches);
-        }
+        // TODO: Think about bringing up there common logic for projection and analytics
+        self.projection.update(&self.document);
+        self.analytics.update(&self.document);
+
+        // TODO: Send over net
 
         Ok(())
     }
 
-    pub fn is_leaf(&self, id: &automerge::ObjId) -> error::Result<bool> {
-        Ok(self
-            .projection
-            .children
-            .get(id)
-            .is_none_or(std::vec::Vec::is_empty))
+
+    // TODO: Move that into peer module
+    pub(super) fn generate_sync_message(
+        &self,
+        local_sync_state: &mut automerge::sync::State,
+    ) -> Option<Vec<u8>> {
+        use automerge::sync::SyncDoc;
+        self.document
+            .generate_sync_message(local_sync_state)
+            .map(automerge::sync::Message::encode)
     }
 
-    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<node::NodeData> {
+    // TODO: Move that into peer module
+    pub(super) fn receive_sync_message(
+        &mut self,
+        local_sync_state: &mut automerge::sync::State,
+        bytes: &[u8],
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        use automerge::sync::SyncDoc;
+        let msg = automerge::sync::Message::decode(bytes)?;
+        self.document.receive_sync_message(local_sync_state, msg)?;
+        Ok(())
+    }
+}
+
+impl Tree {
+    pub fn get_progress(&self, id: &automerge::ObjId) -> error::Result<node::Progress> {
         self.projection
-            .nodes
-            .get(id)
-            .cloned()
+            .get_progress(id)
             .ok_or(error::TreeError::MissingProperty)
     }
 
-    pub fn get_children(&self, id: &automerge::ObjId) -> error::Result<Option<NodeContent>> {
+    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<NodeContent> {
+        if *id == automerge::ObjId::Root {
+            return Ok(NodeContent::Root {
+                children: self.get_children(id),
+            });
+        }
+
+        let current_node = self
+            .projection
+            .get_node(id)
+            .ok_or(error::TreeError::MissingProperty)?;
+
+        if self.has_children(id) {
+            let children = self.get_children(id);
+            Ok(NodeContent::Inner {
+                id: id.clone(),
+                node: current_node,
+                children,
+            })
+        } else {
+            Ok(NodeContent::Leaf {
+                id: id.clone(),
+                node: current_node,
+            })
+        }
+    }
+
+    pub fn get_parent(&self, id: &automerge::ObjId) -> error::Result<&automerge::ObjId> {
+        self.projection
+            .get_parent(id)
+            .ok_or(error::TreeError::MissingProperty)
+    }
+}
+
+impl Tree {
+    fn get_children(&self, id: &automerge::ObjId) -> Vec<(automerge::ObjId, node::NodeData)> {
         let child_ids = self
             .projection
             .children
@@ -79,43 +147,26 @@ impl Tree {
             .cloned()
             .unwrap_or_default();
 
-        if child_ids.is_empty() {
-            if *id == automerge::ObjId::Root {
-                Ok(None)
-            } else {
-                Ok(Some(NodeContent::Leaf((
-                    id.clone(),
-                    node::NodeData::from_doc(&self.document, id)?,
-                ))))
+        let mut childrens = Vec::with_capacity(child_ids.len());
+
+        for child_id in child_ids {
+            if let Some(node) = self.projection.nodes.get(&child_id).cloned() {
+                childrens.push((child_id, node));
             }
-        } else {
-            let mut childrens = Vec::with_capacity(child_ids.len());
-
-            for child_id in child_ids {
-                if let Some(node) = self.projection.nodes.get(&child_id).cloned() {
-                    childrens.push((child_id, node));
-                }
-            }
-
-            Ok(Some(NodeContent::Inner(childrens)))
-        }
-    }
-
-    pub fn get_parent(&self, id: &automerge::ObjId) -> error::Result<automerge::ObjId> {
-        let mut parents = self.document.parents(id)?;
-        parents.next().ok_or(error::TreeError::MissingProperty)?;
-        let parent = parents.next().ok_or(error::TreeError::MissingProperty)?;
-        Ok(parent.obj)
-    }
-
-    pub fn get_progress(&self, id: &automerge::ObjId) -> error::Result<node::Progress> {
-        if id == &automerge::ObjId::Root {
-            return Ok(self.projection.root_progress);
         }
 
-        self.get_node(id).map(|n| n.progress)
+        childrens
     }
 
+    fn has_children(&self, id: &automerge::ObjId) -> bool {
+        self.projection
+            .children
+            .get(id)
+            .is_some_and(|children| !children.is_empty())
+    }
+}
+
+impl Tree {
     pub fn append_child(
         &mut self,
         parent_id: &automerge::ObjId,
@@ -129,8 +180,11 @@ impl Tree {
         let list_len = tx.length(&list_id);
         let new_node_id = tx.insert_object(&list_id, list_len, automerge::ObjType::Map)?;
         node.apply_data(&mut tx, &new_node_id)?;
-        tx.commit();
-        self.sync();
+        tx.commit_with(
+            automerge::transaction::CommitOptions::default()
+                .with_time(chrono::Utc::now().timestamp_millis()),
+        );
+        self.sync()?;
 
         Ok(new_node_id)
     }
@@ -143,8 +197,11 @@ impl Tree {
 
         let mut tx = self.document.transaction();
         tx.delete(&parent_list.obj, parent_list.prop)?;
-        tx.commit();
-        self.sync();
+        tx.commit_with(
+            automerge::transaction::CommitOptions::default()
+                .with_time(chrono::Utc::now().timestamp_millis()),
+        );
+        self.sync()?;
 
         Ok(())
     }
@@ -152,38 +209,35 @@ impl Tree {
     pub fn change_node_name(&mut self, id: &automerge::ObjId, name: String) -> error::Result<()> {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_NAME, name)?;
-        tx.commit();
-        self.sync();
+        tx.commit_with(
+            automerge::transaction::CommitOptions::default()
+                .with_time(chrono::Utc::now().timestamp_millis()),
+        );
+        self.sync()?;
 
         Ok(())
-    }
-
-    pub fn change_node_name_cache(&mut self, id: &automerge::ObjId, name: String) {
-        self.projection.update_node_name(id, name);
     }
 
     pub fn change_node_desc(&mut self, id: &automerge::ObjId, desc: String) -> error::Result<()> {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_DESC, desc)?;
-        tx.commit();
-        self.sync();
+        tx.commit_with(
+            automerge::transaction::CommitOptions::default()
+                .with_time(chrono::Utc::now().timestamp_millis()),
+        );
+        self.sync()?;
 
         Ok(())
-    }
-
-    pub fn change_node_desc_cache(&mut self, id: &automerge::ObjId, desc: String) {
-        self.projection.update_node_desc(id, desc);
-    }
-
-    pub fn change_node_total_cache(&mut self, id: &automerge::ObjId, total: u32) {
-        self.projection.update_node_total(id, total);
     }
 
     pub fn change_node_total(&mut self, id: &automerge::ObjId, total: u32) -> error::Result<()> {
         let mut tx = self.document.transaction();
         tx.put(id, NODE_TASK_TOTAL, total)?;
-        tx.commit();
-        self.sync();
+        tx.commit_with(
+            automerge::transaction::CommitOptions::default()
+                .with_time(chrono::Utc::now().timestamp_millis()),
+        );
+        self.sync()?;
 
         Ok(())
     }
@@ -227,8 +281,11 @@ impl Tree {
         if safe_delta != 0 {
             let mut tx = self.document.transaction();
             tx.increment(id, NODE_TASK_COMPLETED, safe_delta)?;
-            tx.commit();
-            self.sync();
+            tx.commit_with(
+                automerge::transaction::CommitOptions::default()
+                    .with_time(chrono::Utc::now().timestamp_millis()),
+            );
+            self.sync()?;
         }
 
         Ok(())
@@ -245,12 +302,14 @@ impl Default for Tree {
 impl crate::io::storage::FromBytes for Tree {
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         let document = automerge::Automerge::load(bytes)?;
-        let cached_heads = document.get_heads();
         let projection = projection::Projection::new(&document)?;
+        let analytics = analytics::Analytics::new(&document);
 
         Ok(Self {
             document,
+
             projection,
+            analytics,
         })
     }
 }

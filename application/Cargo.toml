@@ -19,3 +19,6 @@ automerge.workspace = true
 rustc-hash = "2.1.2"
 
 dirs = "6.0.0"
+chrono = "0.4.45"
+plotters = "0.3.7"
+plotters-iced2 = "0.14.0"

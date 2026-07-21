@@ -74,7 +74,9 @@ impl Tab {
 
         iced::widget::row![
             button(Self::Tasks),
+            iced::widget::rule::vertical(style::BORDER_WIDTH).style(style::border),
             button(Self::Stats),
+            iced::widget::rule::vertical(style::BORDER_WIDTH).style(style::border),
             button(Self::History),
         ]
         .width(iced::Length::Fill)
@@ -122,7 +124,7 @@ impl App {
     fn new() -> Self {
         Self {
             tab: Tab::default(),
-            split_state: iced_resizable_split::State::new(0.3, 0.1, 0.8),
+            split_state: iced_resizable_split::State::new(0.3, 0.24, 0.8),
 
             tasks: content::Tasks::new(),
             stats: content::Stats::new(),
@@ -171,19 +173,20 @@ impl App {
     }
 
     fn theme(_self: &Self) -> iced::Theme {
-        iced::Theme::KanagawaLotus
-        // iced::Theme::custom(
-        //     String::from("Midnight"),
-        //     iced::theme::Palette {
-        //         background: iced::Color::BLACK,
-        //         text: iced::Color::WHITE,
-        //         primary: iced::Color::from_rgb8(198, 167, 97),
-        //
-        //         success: iced::Color::from_rgb(0.0, 1.0, 0.0),
-        //         warning: iced::Color::from_rgb(1.0, 0.8, 0.0),
-        //         danger: iced::Color::from_rgb(1.0, 0.0, 0.0),
-        //     },
-        // )
+        // iced::Theme::KanagawaLotus
+        iced::Theme::custom(
+            String::from("Midnight"),
+            iced::theme::Palette {
+                background: iced::Color::BLACK,
+                text: iced::Color::WHITE,
+                // primary: iced::Color::from_rgb8(198, 167, 97),
+                primary: iced::Color::WHITE,
+
+                success: iced::Color::from_rgb8(0, 255, 136),
+                warning: iced::Color::from_rgb8(0, 220, 255),
+                danger: iced::Color::from_rgb8(255, 95, 95),
+            },
+        )
     }
 
     fn subscription(&self) -> iced::Subscription<AppMessage> {

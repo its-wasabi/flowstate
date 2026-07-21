@@ -34,7 +34,7 @@ pub(super) fn border_color(
     } else {
         lerp_color(
             palette.background,
-            variant_color(palette, variant, palette.primary),
+            variant_color(palette, variant, palette.text),
             0.3,
         )
     }

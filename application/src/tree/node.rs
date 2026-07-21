@@ -1,21 +1,20 @@
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub struct Progress {
     pub total: u32,
-    completed: u32,
+    pub completed: u32,
 }
 
 impl Progress {
-    /// # Panics
-    /// Panics if completed is bigger than total
     #[must_use]
     pub const fn new(completed: u32, total: u32) -> Self {
-        // TODO: Think about dropping the assertion here
-        assert!(
-            completed <= total,
-            "Completed should never be bigger than total"
-        );
+        // Automatically clamp completed to total so you NEVER get 101%
+        // or cause panics from bad data states during syncing.
+        let safe_completed = if completed > total { total } else { completed };
 
-        Self { total, completed }
+        Self {
+            total,
+            completed: safe_completed,
+        }
     }
 
     #[must_use]
@@ -30,30 +29,39 @@ impl Progress {
 
     #[must_use]
     #[inline]
-    pub const fn procentage(&self) -> f32 {
+    pub fn procentage(&self) -> f32 {
         if self.total == 0 {
             return 0.0;
         }
 
-        let pct = (self.completed as u64 * 100) / self.total as u64;
-
-        #[allow(clippy::cast_precision_loss)]
-        {
-            pct as f32
-        }
+        // By doing the division in f64 and then casting to f32,
+        // if completed == total, it will equal EXACTLY 100.0
+        let exact = (self.completed as f64 * 100.0) / self.total as f64;
+        exact as f32
     }
 }
 
 impl std::ops::AddAssign for Progress {
     fn add_assign(&mut self, rhs: Self) {
-        self.total = self.total + rhs.total;
-        self.completed = self.completed + rhs.completed;
+        self.total = self.total.saturating_add(rhs.total);
+        self.completed = self.completed.saturating_add(rhs.completed);
+
+        if self.completed > self.total {
+            self.completed = self.total;
+        }
     }
 }
 
 impl std::fmt::Display for Progress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.procentage())
+        // Optional: formats to maximum 1 decimal place (e.g. "33.3")
+        // but prints whole numbers cleanly (e.g. "100")
+        let pct = self.procentage();
+        if pct.fract() == 0.0 {
+            write!(f, "{:.0}", pct)
+        } else {
+            write!(f, "{:.1}", pct)
+        }
     }
 }
 
