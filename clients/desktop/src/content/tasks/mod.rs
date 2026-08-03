@@ -1,12 +1,14 @@
 pub struct Tasks {
     current_node_id: automerge::ObjId,
+    pending_delete_id: Option<automerge::ObjId>,
 }
 
 #[derive(Debug, Clone)]
 pub enum TasksMessage {
     GoBack,
     GoNode(automerge::ObjId),
-    DelNode(automerge::ObjId),
+    ReqDelNode(automerge::ObjId),
+    AckDelNode(automerge::ObjId),
     AddNode {
         parent: automerge::ObjId,
         node_data: application::tree::node::NodeData,
@@ -32,6 +34,7 @@ impl Tasks {
     pub const fn new() -> Self {
         Self {
             current_node_id: automerge::ObjId::Root,
+            pending_delete_id: None,
         }
     }
 }
@@ -40,6 +43,13 @@ impl crate::Display for Tasks {
     type Message = TasksMessage;
 
     fn update(&mut self, message: Self::Message, core: &mut application::Core) {
+        if !matches!(
+            message,
+            TasksMessage::ReqDelNode(_) | TasksMessage::AckDelNode(_)
+        ) {
+            self.pending_delete_id = None;
+        }
+
         match message {
             TasksMessage::GoBack => {
                 if let Ok(parent) = core.tree.get_parent(&self.current_node_id) {
@@ -51,16 +61,24 @@ impl crate::Display for Tasks {
 
             TasksMessage::GoNode(id) => self.current_node_id = id,
 
-            TasksMessage::DelNode(id) => {
-                if id == self.current_node_id {
-                    if let Ok(parent) = core.tree.get_parent(&self.current_node_id) {
-                        self.current_node_id = parent.clone();
-                    } else {
-                        eprintln!("GO BACK AFTER DEL FAIL");
-                    }
-                }
+            TasksMessage::ReqDelNode(id) => {
+                self.pending_delete_id = Some(id);
+            }
 
-                core.tree.delete(&id);
+            TasksMessage::AckDelNode(id) => {
+                if let Some(pending_delete_id) = &self.pending_delete_id
+                    && *pending_delete_id == id
+                {
+                    if id == self.current_node_id {
+                        if let Ok(parent) = core.tree.get_parent(&self.current_node_id) {
+                            self.current_node_id = parent.clone();
+                        } else {
+                            eprintln!("GO BACK AFTER DEL FAIL");
+                        }
+                    }
+
+                    core.tree.delete(&id);
+                }
             }
 
             TasksMessage::AddNode { parent, node_data } => {
@@ -111,9 +129,13 @@ impl Tasks {
     fn list_nodes<'a>(&self, tree: &application::tree::Tree) -> iced::Element<'a, TasksMessage> {
         match tree.view(&self.current_node_id) {
             Ok(application::tree::View::RootList { children }) => iced::widget::scrollable(
-                iced::widget::column(children.iter().map(Self::inner_node))
-                    .spacing(6)
-                    .padding(6),
+                iced::widget::column(
+                    children
+                        .iter()
+                        .map(|children| Self::inner_node(self, children)),
+                )
+                .spacing(6)
+                .padding(6),
             )
             .style(crate::style::scroll)
             .height(iced::Length::Fill)
@@ -130,9 +152,13 @@ impl Tasks {
             }) => iced::widget::column![
                 self.current_node(&current_id, &current_node),
                 iced::widget::scrollable(
-                    iced::widget::column(children.iter().map(Self::inner_node))
-                        .spacing(6)
-                        .padding(6),
+                    iced::widget::column(
+                        children
+                            .iter()
+                            .map(|children| Self::inner_node(self, children))
+                    )
+                    .spacing(6)
+                    .padding(6),
                 )
                 .style(crate::style::scroll)
                 .height(iced::Length::Fill)
@@ -279,7 +305,7 @@ impl Tasks {
                     .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
                     .padding(crate::style::PADDING)
                     .style(delete_btn_style)
-                    .on_press(TasksMessage::DelNode(id)),
+                    .on_press(TasksMessage::ReqDelNode(id)),
             ]
             .height(iced::Length::Shrink)
             .padding(crate::style::PADDING),
@@ -297,7 +323,10 @@ impl Tasks {
         .into()
     }
 
-    fn inner_node<'a>(entry: &application::tree::ChildEntry) -> iced::Element<'a, TasksMessage> {
+    fn inner_node<'a>(
+        &self,
+        entry: &application::tree::ChildEntry,
+    ) -> iced::Element<'a, TasksMessage> {
         let (right_btn_style, right_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Default, true);
         let (minus_btn_style, minus_svg_style) =
@@ -367,12 +396,25 @@ impl Tasks {
                 iced::widget::space()
                     .height(iced::Length::Fill)
                     .width(iced::Length::Fixed(crate::style::PADDING)),
-                iced::widget::button(crate::icon::delete(delete_svg_style))
-                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                if let Some(pending_delete_id) = &self.pending_delete_id
+                    && *pending_delete_id == entry.id
+                {
+                    iced::widget::button(
+                        iced::widget::text("CONFIRM").style(crate::style::text(false)),
+                    )
+                    .width(iced::Length::Shrink)
                     .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
                     .padding(crate::style::PADDING)
                     .style(delete_btn_style)
-                    .on_press(TasksMessage::DelNode(entry.id.clone())),
+                    .on_press(TasksMessage::AckDelNode(entry.id.clone()))
+                } else {
+                    iced::widget::button(crate::icon::delete(delete_svg_style))
+                        .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                        .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                        .padding(crate::style::PADDING)
+                        .style(delete_btn_style)
+                        .on_press(TasksMessage::ReqDelNode(entry.id.clone()))
+                },
                 iced::widget::space()
                     .height(iced::Length::Fill)
                     .width(iced::Length::Fixed(crate::style::PADDING)),
