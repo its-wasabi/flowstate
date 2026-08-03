@@ -109,15 +109,11 @@ impl crate::Display for Tasks {
 
 impl Tasks {
     fn list_nodes<'a>(&self, tree: &application::tree::Tree) -> iced::Element<'a, TasksMessage> {
-        match tree.get_node(&self.current_node_id) {
-            Ok(application::tree::View::Root { children }) => iced::widget::scrollable(
-                iced::widget::column(
-                    children
-                        .iter()
-                        .map(|children| Self::inner_node(&children.0, &children.1)),
-                )
-                .spacing(6)
-                .padding(6),
+        match tree.view(&self.current_node_id) {
+            Ok(application::tree::View::RootList { children }) => iced::widget::scrollable(
+                iced::widget::column(children.iter().map(Self::inner_node))
+                    .spacing(6)
+                    .padding(6),
             )
             .style(crate::style::scroll)
             .height(iced::Length::Fill)
@@ -127,29 +123,27 @@ impl Tasks {
             ))
             .into(),
 
-            Ok(application::tree::View::Leaf { id, node }) => Self::leaf_node(id, &node),
-
-            Ok(application::tree::View::Inner { id, node, children }) => {
-                iced::widget::column![
-                    self.current_node(id, node),
-                    iced::widget::scrollable(
-                        iced::widget::column(
-                            children
-                                .iter()
-                                .map(|children| { Self::inner_node(&children.0, &children.1) })
-                        )
+            Ok(application::tree::View::InnerList {
+                current_id,
+                current_node,
+                children,
+            }) => iced::widget::column![
+                self.current_node(&current_id, &current_node),
+                iced::widget::scrollable(
+                    iced::widget::column(children.iter().map(Self::inner_node))
                         .spacing(6)
                         .padding(6),
-                    )
-                    .style(crate::style::scroll)
-                    .height(iced::Length::Fill)
-                    .auto_scroll(true)
-                    .direction(iced::widget::scrollable::Direction::Vertical(
-                        iced::widget::scrollable::Scrollbar::hidden()
-                    ))
-                ]
-                .into()
-            }
+                )
+                .style(crate::style::scroll)
+                .height(iced::Length::Fill)
+                .auto_scroll(true)
+                .direction(iced::widget::scrollable::Direction::Vertical(
+                    iced::widget::scrollable::Scrollbar::hidden()
+                ))
+            ]
+            .into(),
+
+            Ok(application::tree::View::Leaf { id, node }) => Self::leaf_node(id, &node),
 
             Err(_) => iced::widget::space()
                 .width(iced::Length::Fill)
@@ -160,8 +154,8 @@ impl Tasks {
 
     fn current_node<'a>(
         &self,
-        id: automerge::ObjId,
-        node: application::tree::node::NodeData,
+        id: &automerge::ObjId,
+        node: &application::tree::node::NodeData,
     ) -> iced::Element<'a, TasksMessage> {
         let name_id = self.current_node_id.clone();
         let desc_id = self.current_node_id.clone();
@@ -303,10 +297,7 @@ impl Tasks {
         .into()
     }
 
-    fn inner_node<'a>(
-        id: &automerge::ObjId,
-        node: &application::tree::node::NodeData,
-    ) -> iced::Element<'a, TasksMessage> {
+    fn inner_node<'a>(entry: &application::tree::ChildEntry) -> iced::Element<'a, TasksMessage> {
         let (right_btn_style, right_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Default, true);
         let (minus_btn_style, minus_svg_style) =
@@ -316,10 +307,8 @@ impl Tasks {
         let (delete_btn_style, delete_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Danger, true);
 
-        let name_id = id.clone();
-
-        let progress_procentage = node.progress.procentage();
-
+        let progress_procentage = entry.node.progress.procentage();
+        let name_id = entry.id.clone();
         iced::widget::container(iced::widget::column![
             iced::widget::stack![
                 iced::widget::progress_bar(0.0..=100.0, progress_procentage)
@@ -336,7 +325,7 @@ impl Tasks {
             .height(iced::Length::Fixed(crate::style::SMALL_BAR_HEIGHT)),
             iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),
             iced::widget::row![
-                iced::widget::text_input("NAME", &node.name)
+                iced::widget::text_input("NAME", &entry.node.name)
                     .width(iced::Length::Fill)
                     .line_height(iced::widget::text::LineHeight::Absolute(iced::Pixels(
                         crate::style::SMALL_BUTTON_SIZE
@@ -349,24 +338,32 @@ impl Tasks {
                         content,
                     })
                     .style(crate::style::text_input),
-                iced::widget::button(crate::icon::minus(minus_svg_style))
-                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
-                    .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
-                    .padding(crate::style::PADDING)
-                    .style(minus_btn_style)
-                    .on_press(TasksMessage::NodeCompletedChange {
-                        id: id.clone(),
-                        delta: -1
-                    }),
-                iced::widget::button(crate::icon::plus(plus_svg_style))
-                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
-                    .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
-                    .padding(crate::style::PADDING)
-                    .style(plus_btn_style)
-                    .on_press(TasksMessage::NodeCompletedChange {
-                        id: id.clone(),
-                        delta: 1
-                    }),
+                entry.is_leaf.then(|| {
+                    let (minus_btn_style, minus_svg_style) =
+                        crate::style::button_with_icon(crate::style::Variant::Warn, true);
+                    iced::widget::button(crate::icon::minus(minus_svg_style))
+                        .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                        .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                        .padding(crate::style::PADDING)
+                        .style(minus_btn_style)
+                        .on_press(TasksMessage::NodeCompletedChange {
+                            id: entry.id.clone(),
+                            delta: -1,
+                        })
+                }),
+                entry.is_leaf.then(|| {
+                    let (plus_btn_style, plus_svg_style) =
+                        crate::style::button_with_icon(crate::style::Variant::Ok, true);
+                    iced::widget::button(crate::icon::plus(plus_svg_style))
+                        .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                        .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                        .padding(crate::style::PADDING)
+                        .style(plus_btn_style)
+                        .on_press(TasksMessage::NodeCompletedChange {
+                            id: entry.id.clone(),
+                            delta: 1,
+                        })
+                }),
                 iced::widget::space()
                     .height(iced::Length::Fill)
                     .width(iced::Length::Fixed(crate::style::PADDING)),
@@ -375,7 +372,7 @@ impl Tasks {
                     .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
                     .padding(crate::style::PADDING)
                     .style(delete_btn_style)
-                    .on_press(TasksMessage::DelNode(id.clone())),
+                    .on_press(TasksMessage::DelNode(entry.id.clone())),
                 iced::widget::space()
                     .height(iced::Length::Fill)
                     .width(iced::Length::Fixed(crate::style::PADDING)),
@@ -384,7 +381,7 @@ impl Tasks {
                     .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
                     .padding(crate::style::PADDING)
                     .style(right_btn_style)
-                    .on_press(TasksMessage::GoNode(id.clone()))
+                    .on_press(TasksMessage::GoNode(entry.id.clone()))
             ]
             .padding(6)
         ])

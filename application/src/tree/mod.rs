@@ -25,20 +25,26 @@ pub struct Tree {
 }
 
 pub enum View {
-    Root {
-        children: Vec<(automerge::ObjId, node::NodeData)>,
+    RootList {
+        children: Vec<ChildEntry>,
+    },
+
+    InnerList {
+        current_id: automerge::ObjId,
+        current_node: node::NodeData,
+        children: Vec<ChildEntry>,
     },
 
     Leaf {
         id: automerge::ObjId,
         node: node::NodeData,
     },
+}
 
-    Inner {
-        id: automerge::ObjId,
-        node: node::NodeData,
-        children: Vec<(automerge::ObjId, node::NodeData)>,
-    },
+pub struct ChildEntry {
+    pub id: automerge::ObjId,
+    pub node: node::NodeData,
+    pub is_leaf: bool,
 }
 
 impl Tree {
@@ -97,15 +103,9 @@ impl Tree {
 }
 
 impl Tree {
-    pub fn get_progress(&self, id: &automerge::ObjId) -> error::Result<node::Progress> {
-        self.projection
-            .get_progress(id)
-            .ok_or(error::TreeError::MissingProperty)
-    }
-
-    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<View> {
+    pub fn view(&self, id: &automerge::ObjId) -> error::Result<View> {
         if *id == automerge::ObjId::Root {
-            return Ok(View::Root {
+            return Ok(View::RootList {
                 children: self.get_children(id),
             });
         }
@@ -117,9 +117,9 @@ impl Tree {
 
         if self.has_children(id) {
             let children = self.get_children(id);
-            Ok(View::Inner {
-                id: id.clone(),
-                node: current_node,
+            Ok(View::InnerList {
+                current_id: id.clone(),
+                current_node,
                 children,
             })
         } else {
@@ -130,6 +130,12 @@ impl Tree {
         }
     }
 
+    pub fn get_progress(&self, id: &automerge::ObjId) -> error::Result<node::Progress> {
+        self.projection
+            .get_progress(id)
+            .ok_or(error::TreeError::MissingProperty)
+    }
+
     pub fn get_parent(&self, id: &automerge::ObjId) -> error::Result<&automerge::ObjId> {
         self.projection
             .get_parent(id)
@@ -138,7 +144,7 @@ impl Tree {
 }
 
 impl Tree {
-    fn get_children(&self, id: &automerge::ObjId) -> Vec<(automerge::ObjId, node::NodeData)> {
+    fn get_children(&self, id: &automerge::ObjId) -> Vec<ChildEntry> {
         let child_ids = self
             .projection
             .children
@@ -150,7 +156,12 @@ impl Tree {
 
         for child_id in child_ids {
             if let Some(node) = self.projection.nodes.get(&child_id).cloned() {
-                childrens.push((child_id, node));
+                let has_children = self.has_children(&child_id);
+                childrens.push(ChildEntry {
+                    id: child_id,
+                    node,
+                    is_leaf: !has_children,
+                });
             }
         }
 
