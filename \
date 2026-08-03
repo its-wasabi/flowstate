@@ -48,6 +48,7 @@ impl Projection {
         let mut dirty_nodes = rustc_hash::FxHashSet::default();
         let mut lists_to_sync = rustc_hash::FxHashSet::default();
 
+        // 1. Map Patches to Actions
         for patch in patches {
             let obj = &patch.obj;
             match &patch.action {
@@ -58,22 +59,22 @@ impl Projection {
                     dirty_nodes.insert(obj.clone());
                 }
                 PatchAction::DeleteMap { key, .. } => {
-                    if key == super::CHILDREN
-                        && let Some(old_children) = self.children.remove(obj)
-                    {
-                        for child in old_children {
-                            self.purge(&child);
+                    if key == super::CHILDREN {
+                        if let Some(old_children) = self.children.remove(obj) {
+                            for child in old_children {
+                                self.purge(&child);
+                            }
                         }
                     }
                     dirty_nodes.insert(obj.clone());
                 }
                 PatchAction::Insert { .. }
                 | PatchAction::PutSeq { .. }
-                | PatchAction::DeleteSeq { .. }
-                    if let Ok(mut parents) = document.parents(obj) =>
-                {
-                    if let Some(parent_info) = parents.next() {
-                        lists_to_sync.insert((obj.clone(), parent_info.obj));
+                | PatchAction::DeleteSeq { .. } => {
+                    if let Ok(mut parents) = document.parents(obj) {
+                        if let Some(parent_info) = parents.next() {
+                            lists_to_sync.insert((obj.clone(), parent_info.obj));
+                        }
                     }
                 }
                 _ => {}
@@ -182,7 +183,7 @@ impl Projection {
         let mut progress = rustc_hash::FxHashSet::default();
 
         for patch in patches {
-            let automerge::patches::Patch { obj, action, .. } = patch.clone();
+            let automerge::patches::Patch { &obj, action, .. } = patch;
 
             match action {
                 PatchAction::PutMap { key, .. } => match key.as_str() {
@@ -214,7 +215,7 @@ impl Projection {
                 | PatchAction::DeleteSeq { .. } => {
                     if let Ok(mut parents) = document.parents(&obj) {
                         if let Some(parent_info) = parents.next() {
-                            structural.insert(parent_info.obj);
+                            structural.insert(&parent_info.obj);
                         }
                     }
                 }

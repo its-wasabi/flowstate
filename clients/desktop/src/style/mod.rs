@@ -8,11 +8,16 @@ pub use button::{button_with_icon, tab_button_style};
 pub const PADDING: f32 = 4.0;
 pub const BORDER_WIDTH: f32 = 1.0;
 
-pub const TOP_BAR_HEIGHT: f32 = 20.0;
+pub const SMALL_BAR_HEIGHT: f32 = 19.0;
+pub const TOP_BAR_HEIGHT: f32 = 22.0;
 pub const DEFAULT_ASIDE_WIDTH: f32 = 280.0;
 
 pub const BIG_BUTTON_SIZE: f32 = 48.0;
 pub const SMALL_BUTTON_SIZE: f32 = 28.0;
+
+pub const SMALL_TEXT_SIZE: f32 = 13.0;
+pub const MID_TEXT_SIZE: f32 = 15.0;
+pub const BIG_TEXT_SIZE: f32 = 16.5;
 
 #[derive(Clone, Copy)]
 pub enum Variant {

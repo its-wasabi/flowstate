@@ -72,8 +72,6 @@ impl Analytics {
         } else {
             self.last_heads = document.get_heads();
         }
-
-        println!("{:#?}", self.timeline);
     }
 
     fn rebuild_from_time(
@@ -85,21 +83,20 @@ impl Analytics {
             .get_changes(&[])
             .iter()
             .filter_map(|change| {
-                let date_time = chrono::DateTime::from_timestamp_millis(change.timestamp())?;
-                let hour = TimeScale::Hour.truncate(date_time.naive_utc())?;
-                Some((hour, change.hash()))
+                let dt = chrono::DateTime::from_timestamp_millis(change.timestamp())?;
+                let hour = TimeScale::Hour.truncate(dt.naive_utc())?;
+                (hour >= start_time).then_some((hour, change.hash())) // <-- filter
             })
             .collect();
 
         self.timeline.split_off(&start_time);
 
         for (hour, hash) in last_hash_per_hour {
-            if let Ok(forked_doc) = document.fork_at(&[hash]) {
-                let (completed, total) = Self::fast_sum_progress(&forked_doc);
+            if let Ok(forked) = document.fork_at(&[hash]) {
+                let (completed, total) = Self::fast_sum_progress(&forked);
                 self.timeline.insert(hour, Snapshot { completed, total });
             }
         }
-
         self.last_heads = document.get_heads();
     }
 
@@ -175,10 +172,7 @@ impl Analytics {
     }
 
     #[must_use]
-    pub fn change_over_time(
-        &self,
-        scale: TimeScale,
-    ) -> Vec<(chrono::NaiveDateTime, i32)> {
+    pub fn change_over_time(&self, scale: TimeScale) -> Vec<(chrono::NaiveDateTime, i32)> {
         let mut previous_completed = 0;
         self.snapshots_by_scale(scale)
             .into_iter()

@@ -61,10 +61,12 @@ impl Tab {
             let text = iced::widget::text(tab.name())
                 .width(iced::Length::Fill)
                 .height(iced::Length::Fill)
+                .size(crate::style::MID_TEXT_SIZE)
                 .center();
             iced::widget::button(text)
                 .on_press(AppMessage::TabChanged(tab))
                 .width(iced::Length::Fill)
+                .height(iced::Length::Fill)
                 .padding(3)
                 .style(style::tab_button_style(
                     style::Variant::Default,

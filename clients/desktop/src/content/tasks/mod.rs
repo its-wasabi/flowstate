@@ -42,28 +42,30 @@ impl crate::Display for Tasks {
     fn update(&mut self, message: Self::Message, core: &mut application::Core) {
         match message {
             TasksMessage::GoBack => {
-                println!("GoBack");
                 if let Ok(parent) = core.tree.get_parent(&self.current_node_id) {
                     self.current_node_id = parent.clone();
                 } else {
-                    println!("FAIL");
+                    println!("GO BACK FAIL");
                 }
             }
 
             TasksMessage::GoNode(id) => self.current_node_id = id,
 
             TasksMessage::DelNode(id) => {
-                core.tree.delete(&id);
-                if id == self.current_node_id
-                    && let Ok(parent) = core.tree.get_parent(&self.current_node_id)
-                {
-                    self.current_node_id = parent.clone();
+                if id == self.current_node_id {
+                    if let Ok(parent) = core.tree.get_parent(&self.current_node_id) {
+                        self.current_node_id = parent.clone();
+                    } else {
+                        eprintln!("GO BACK AFTER DEL FAIL");
+                    }
                 }
+
+                core.tree.delete(&id);
             }
 
             TasksMessage::AddNode { parent, node_data } => {
                 if core.tree.append_child(&parent, &node_data).is_err() {
-                    unimplemented!("Logging with build cfg")
+                    eprintln!("ADD TASK FAIL");
                 }
             }
 
@@ -84,14 +86,10 @@ impl crate::Display for Tasks {
     }
 
     fn view_center(&self, core: &application::Core) -> iced::Element<'_, Self::Message> {
-        iced::widget::column![
-            self.current_progress(&core.tree),
-            self.list_nodes(&core.tree),
-            self.add_node()
-        ]
-        .width(iced::Length::Fill)
-        .height(iced::Length::Fill)
-        .into()
+        iced::widget::column![self.list_nodes(&core.tree), self.add_node()]
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fill)
+            .into()
     }
 
     fn view_aside(&self, core: &application::Core) -> iced::Element<'_, Self::Message> {
@@ -110,46 +108,9 @@ impl crate::Display for Tasks {
 }
 
 impl Tasks {
-    fn current_progress(&self, tree: &application::tree::Tree) -> iced::Element<'_, TasksMessage> {
-        if let Ok(progress) = tree.get_progress(&self.current_node_id) {
-            let procentage = progress.procentage();
-            iced::widget::column![
-                iced::widget::container(
-                    iced::widget::stack![
-                        iced::widget::progress_bar(0.0..=100.0, procentage)
-                            .style(crate::style::progress),
-                        iced::widget::text!(" [{procentage:.2}%]")
-                            .width(iced::Length::Fill)
-                            .height(iced::Length::Fill)
-                            .align_x(iced::Alignment::Start)
-                            .align_y(iced::Alignment::Center)
-                            .style(crate::style::text(true))
-                            .size(14),
-                    ]
-                    .width(iced::Length::Fill)
-                    .height(iced::Length::Shrink),
-                )
-                .width(iced::Length::Fill)
-                .height(iced::Length::Fixed(crate::style::TOP_BAR_HEIGHT)),
-                iced::widget::rule::horizontal(crate::style::BORDER_WIDTH)
-                    .style(crate::style::border)
-            ]
-            .width(iced::Length::Fill)
-            .height(iced::Length::Shrink)
-            .into()
-        } else {
-            iced::widget::space()
-                .width(iced::Length::Fill)
-                .height(iced::Length::Fixed(
-                    crate::style::TOP_BAR_HEIGHT + crate::style::BORDER_WIDTH,
-                ))
-                .into()
-        }
-    }
-
     fn list_nodes<'a>(&self, tree: &application::tree::Tree) -> iced::Element<'a, TasksMessage> {
         match tree.get_node(&self.current_node_id) {
-            Ok(application::tree::NodeContent::Root { children }) => iced::widget::scrollable(
+            Ok(application::tree::View::Root { children }) => iced::widget::scrollable(
                 iced::widget::column(
                     children
                         .iter()
@@ -166,9 +127,9 @@ impl Tasks {
             ))
             .into(),
 
-            Ok(application::tree::NodeContent::Leaf { id, node }) => Self::leaf_node(id, &node),
+            Ok(application::tree::View::Leaf { id, node }) => Self::leaf_node(id, &node),
 
-            Ok(application::tree::NodeContent::Inner { id, node, children }) => {
+            Ok(application::tree::View::Inner { id, node, children }) => {
                 iced::widget::column![
                     self.current_node(id, node),
                     iced::widget::scrollable(
@@ -208,7 +169,23 @@ impl Tasks {
         let (left_btn_style, left_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Default, true);
 
+        let progress_procentage = node.progress.procentage();
+
         iced::widget::column![
+            iced::widget::stack![
+                iced::widget::progress_bar(0.0..=100.0, progress_procentage)
+                    .style(crate::style::progress),
+                iced::widget::text!(" {progress_procentage:.0}%")
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
+                    .align_x(iced::Alignment::Start)
+                    .align_y(iced::Alignment::Center)
+                    .style(crate::style::text(true))
+                    .size(crate::style::SMALL_TEXT_SIZE)
+            ]
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fixed(crate::style::TOP_BAR_HEIGHT)),
+            iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),
             iced::widget::row![
                 iced::widget::button(crate::icon::left(left_svg_style))
                     .width(iced::Length::Fixed(crate::style::BIG_BUTTON_SIZE))
@@ -225,6 +202,7 @@ impl Tasks {
                         .line_height(iced::widget::text::LineHeight::Absolute(iced::Pixels(
                             crate::style::BIG_BUTTON_SIZE / 2.0
                         )))
+                        .size(crate::style::BIG_TEXT_SIZE)
                         .padding(0)
                         .align_x(iced::Alignment::Start)
                         .on_input(move |content| TasksMessage::NodeNameChange {
@@ -237,6 +215,7 @@ impl Tasks {
                         .line_height(iced::widget::text::LineHeight::Absolute(iced::Pixels(
                             crate::style::BIG_BUTTON_SIZE / 2.0
                         )))
+                        .size(crate::style::BIG_TEXT_SIZE)
                         .padding(0)
                         .align_x(iced::Alignment::Start)
                         .on_input(move |content| TasksMessage::NodeDescChange {
@@ -280,15 +259,6 @@ impl Tasks {
                 iced::widget::space()
                     .height(iced::Length::Fill)
                     .width(iced::Length::Fixed(crate::style::PADDING)),
-                iced::widget::button(crate::icon::delete(delete_svg_style))
-                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
-                    .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
-                    .padding(crate::style::PADDING)
-                    .style(delete_btn_style)
-                    .on_press(TasksMessage::DelNode(id.clone())),
-                iced::widget::space()
-                    .height(iced::Length::Fill)
-                    .width(iced::Length::Fixed(crate::style::PADDING)),
                 iced::widget::button(crate::icon::minus(minus_svg_style))
                     .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
                     .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
@@ -303,7 +273,19 @@ impl Tasks {
                     .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
                     .padding(crate::style::PADDING)
                     .style(plus_btn_style)
-                    .on_press(TasksMessage::NodeCompletedChange { id, delta: 1 }),
+                    .on_press(TasksMessage::NodeCompletedChange {
+                        id: id.clone(),
+                        delta: 1
+                    }),
+                iced::widget::space()
+                    .height(iced::Length::Fill)
+                    .width(iced::Length::Fixed(crate::style::PADDING)),
+                iced::widget::button(crate::icon::delete(delete_svg_style))
+                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                    .padding(crate::style::PADDING)
+                    .style(delete_btn_style)
+                    .on_press(TasksMessage::DelNode(id)),
             ]
             .height(iced::Length::Shrink)
             .padding(crate::style::PADDING),
@@ -336,13 +318,22 @@ impl Tasks {
 
         let name_id = id.clone();
 
+        let progress_procentage = node.progress.procentage();
+
         iced::widget::container(iced::widget::column![
-            iced::widget::container(
-                iced::widget::progress_bar(0.0..=100.0, node.progress.procentage())
-                    .style(crate::style::progress)
-            )
+            iced::widget::stack![
+                iced::widget::progress_bar(0.0..=100.0, progress_procentage)
+                    .style(crate::style::progress),
+                iced::widget::text!(" {progress_procentage:.0}%")
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
+                    .align_x(iced::Alignment::Start)
+                    .align_y(iced::Alignment::Center)
+                    .style(crate::style::text(true))
+                    .size(crate::style::SMALL_TEXT_SIZE)
+            ]
             .width(iced::Length::Fill)
-            .height(iced::Length::Fixed(crate::style::TOP_BAR_HEIGHT / 2.0)),
+            .height(iced::Length::Fixed(crate::style::SMALL_BAR_HEIGHT)),
             iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),
             iced::widget::row![
                 iced::widget::text_input("NAME", &node.name)
@@ -350,6 +341,7 @@ impl Tasks {
                     .line_height(iced::widget::text::LineHeight::Absolute(iced::Pixels(
                         crate::style::SMALL_BUTTON_SIZE
                     )))
+                    .size(crate::style::BIG_TEXT_SIZE)
                     .padding(0)
                     .align_x(iced::Alignment::Start)
                     .on_input(move |content| TasksMessage::NodeNameChange {
@@ -419,7 +411,7 @@ impl Tasks {
                 })
         ]
         .width(iced::Length::Fill)
-        .height(iced::Length::Fixed(24.0))
+        .height(iced::Length::Fixed(26.0))
         .into()
     }
 }

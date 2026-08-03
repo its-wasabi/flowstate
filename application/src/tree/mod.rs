@@ -24,7 +24,7 @@ pub struct Tree {
     pub analytics: analytics::Analytics,
 }
 
-pub enum NodeContent {
+pub enum View {
     Root {
         children: Vec<(automerge::ObjId, node::NodeData)>,
     },
@@ -51,7 +51,7 @@ impl Tree {
                 .with_time(chrono::Utc::now().timestamp_millis()),
         );
 
-        let projection = projection::Projection::new(&document)?;
+        let projection = projection::Projection::new(&document);
         let analytics = analytics::Analytics::new(&document);
 
         Ok(Self {
@@ -71,7 +71,6 @@ impl Tree {
 
         Ok(())
     }
-
 
     // TODO: Move that into peer module
     pub(super) fn generate_sync_message(
@@ -104,9 +103,9 @@ impl Tree {
             .ok_or(error::TreeError::MissingProperty)
     }
 
-    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<NodeContent> {
+    pub fn get_node(&self, id: &automerge::ObjId) -> error::Result<View> {
         if *id == automerge::ObjId::Root {
-            return Ok(NodeContent::Root {
+            return Ok(View::Root {
                 children: self.get_children(id),
             });
         }
@@ -118,13 +117,13 @@ impl Tree {
 
         if self.has_children(id) {
             let children = self.get_children(id);
-            Ok(NodeContent::Inner {
+            Ok(View::Inner {
                 id: id.clone(),
                 node: current_node,
                 children,
             })
         } else {
-            Ok(NodeContent::Leaf {
+            Ok(View::Leaf {
                 id: id.clone(),
                 node: current_node,
             })
@@ -302,7 +301,7 @@ impl Default for Tree {
 impl crate::io::storage::FromBytes for Tree {
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         let document = automerge::Automerge::load(bytes)?;
-        let projection = projection::Projection::new(&document)?;
+        let projection = projection::Projection::new(&document);
         let analytics = analytics::Analytics::new(&document);
 
         Ok(Self {
