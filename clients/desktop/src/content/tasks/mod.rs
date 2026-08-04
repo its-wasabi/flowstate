@@ -5,6 +5,7 @@ pub struct Tasks {
 
 #[derive(Debug, Clone)]
 pub enum TasksMessage {
+    Background,
     GoBack,
     GoNode(automerge::ObjId),
     ReqDelNode(automerge::ObjId),
@@ -51,6 +52,8 @@ impl crate::Display for Tasks {
         }
 
         match message {
+            TasksMessage::Background => {}
+
             TasksMessage::GoBack => {
                 if let Ok(parent) = core.tree.get_parent(&self.current_node_id) {
                     self.current_node_id = parent.clone();
@@ -100,6 +103,21 @@ impl crate::Display for Tasks {
                 // FIX: Change to cache function - now it spams automerge with changes
                 core.tree.projection.update_node_desc(&id, content);
             }
+        }
+    }
+
+    fn subscription(&self) -> iced::Subscription<TasksMessage> {
+        if self.pending_delete_id.is_some() {
+            iced::event::listen_with(|event, status, _window_id| {
+                if status == iced::event::Status::Ignored
+                    && let iced::Event::Mouse(iced::mouse::Event::ButtonPressed(_)) = event
+                {
+                    return Some(TasksMessage::Background);
+                }
+                None
+            })
+        } else {
+            iced::Subscription::none()
         }
     }
 
@@ -268,7 +286,23 @@ impl Tasks {
         let name_id = id.clone();
         let desc_id = id.clone();
 
+        let progress_procentage = node.progress.procentage();
+
         iced::widget::column![
+            iced::widget::stack![
+                iced::widget::progress_bar(0.0..=100.0, progress_procentage)
+                    .style(crate::style::progress),
+                iced::widget::text!(" {progress_procentage:.0}%")
+                    .width(iced::Length::Fill)
+                    .height(iced::Length::Fill)
+                    .align_x(iced::Alignment::Start)
+                    .align_y(iced::Alignment::Center)
+                    .style(crate::style::text(true))
+                    .size(crate::style::SMALL_TEXT_SIZE)
+            ]
+            .width(iced::Length::Fill)
+            .height(iced::Length::Fixed(crate::style::TOP_BAR_HEIGHT)),
+            iced::widget::rule::horizontal(crate::style::BORDER_WIDTH).style(crate::style::border),
             iced::widget::row![
                 iced::widget::button(crate::icon::left(left_svg_style))
                     .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))

@@ -38,13 +38,13 @@ trait Display {
 
     fn update(&mut self, message: Self::Message, core: &mut application::Core);
 
-    fn view_center(&self, core: &application::Core) -> iced::Element<'_, Self::Message>;
-
-    fn view_aside(&self, core: &application::Core) -> iced::Element<'_, Self::Message>;
-
     fn subscription(&self) -> iced::Subscription<Self::Message> {
         iced::Subscription::none()
     }
+
+    fn view_center(&self, core: &application::Core) -> iced::Element<'_, Self::Message>;
+
+    fn view_aside(&self, core: &application::Core) -> iced::Element<'_, Self::Message>;
 }
 
 impl Tab {
@@ -174,21 +174,22 @@ impl App {
             .into()
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     fn theme(_self: &Self) -> iced::Theme {
-        // iced::Theme::KanagawaLotus
-        iced::Theme::custom(
-            String::from("Midnight"),
-            iced::theme::Palette {
-                background: iced::Color::BLACK,
-                text: iced::Color::WHITE,
-                // primary: iced::Color::from_rgb8(198, 167, 97),
-                primary: iced::Color::WHITE,
-
-                success: iced::Color::from_rgb8(0, 255, 136),
-                warning: iced::Color::from_rgb8(0, 220, 255),
-                danger: iced::Color::from_rgb8(255, 95, 95),
-            },
-        )
+        iced::Theme::KanagawaLotus
+        // iced::Theme::custom(
+        //     String::from("Midnight"),
+        //     iced::theme::Palette {
+        //         background: iced::Color::BLACK,
+        //         text: iced::Color::WHITE,
+        //         // primary: iced::Color::from_rgb8(198, 167, 97),
+        //         primary: iced::Color::WHITE,
+        //
+        //         success: iced::Color::from_rgb8(0, 255, 136),
+        //         warning: iced::Color::from_rgb8(0, 220, 255),
+        //         danger: iced::Color::from_rgb8(255, 95, 95),
+        //     },
+        // )
     }
 
     fn subscription(&self) -> iced::Subscription<AppMessage> {
