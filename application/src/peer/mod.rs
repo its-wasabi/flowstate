@@ -9,7 +9,7 @@ pub struct Peer {
 
 impl Peer {
     pub fn new(
-        document: &mut automerge::Automerge,
+        _document: &mut automerge::Automerge,
         socket_addr: std::net::SocketAddr,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let local_peer_state = automerge::sync::State::new();
@@ -19,8 +19,8 @@ impl Peer {
             .path_and_query("/")
             .build()?;
 
-        let (to_net_tx, to_net_rx) = tokio::sync::mpsc::channel(32);
-        let (from_net_tx, from_net_rx) = tokio::sync::mpsc::channel(32);
+        let (_to_net_tx, to_net_rx) = tokio::sync::mpsc::channel(32);
+        let (from_net_tx, _from_net_rx) = tokio::sync::mpsc::channel(32);
 
         Ok(Self {
             local_peer_state,
@@ -30,7 +30,7 @@ impl Peer {
         })
     }
 
-    pub fn sync(&mut self, document: &mut automerge::Automerge) {}
+    pub fn sync(&mut self, _document: &mut automerge::Automerge) {}
 
     // async fn network_task(
     //     &self,

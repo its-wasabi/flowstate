@@ -51,7 +51,7 @@ impl Projection {
         for patch in patches {
             let obj = &patch.obj;
             match &patch.action {
-                PatchAction::PutMap { key, .. } => {
+                PatchAction::PutMap { key: _, .. } => {
                     dirty_nodes.insert(obj.clone());
                 }
                 PatchAction::Increment { .. } => {

@@ -203,7 +203,7 @@ impl Tree {
         let mut parents = self.document.parents(id)?;
         let parent_list = parents.next().ok_or(error::TreeError::MissingProperty)?;
         let parent_node = parents.next().ok_or(error::TreeError::MissingRoot)?;
-        let parent_id = parent_node.obj;
+        let _parent_id = parent_node.obj;
 
         let mut tx = self.document.transaction();
         tx.delete(&parent_list.obj, parent_list.prop)?;

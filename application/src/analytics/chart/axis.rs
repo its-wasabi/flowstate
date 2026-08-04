@@ -33,7 +33,7 @@ impl AxisValue for chrono::NaiveDate {
         todo!()
     }
 
-    fn from(val: Self::Value) -> Option<Self> {
+    fn from(_val: Self::Value) -> Option<Self> {
         todo!()
     }
 }
