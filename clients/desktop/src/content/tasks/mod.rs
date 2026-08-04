@@ -187,7 +187,7 @@ impl Tasks {
             ]
             .into(),
 
-            Ok(application::tree::View::Leaf { id, node }) => Self::leaf_node(id, &node),
+            Ok(application::tree::View::Leaf { id, node }) => Self::leaf_node(self, id, &node),
 
             Err(_) => iced::widget::space()
                 .width(iced::Length::Fill)
@@ -271,6 +271,7 @@ impl Tasks {
     }
 
     fn leaf_node<'a>(
+        &self,
         id: automerge::ObjId,
         node: &application::tree::node::NodeData,
     ) -> iced::Element<'a, TasksMessage> {
@@ -334,12 +335,25 @@ impl Tasks {
                 iced::widget::space()
                     .height(iced::Length::Fill)
                     .width(iced::Length::Fixed(crate::style::PADDING)),
-                iced::widget::button(crate::icon::delete(delete_svg_style))
-                    .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                if let Some(pending_delete_id) = &self.pending_delete_id
+                    && *pending_delete_id == id
+                {
+                    iced::widget::button(
+                        iced::widget::text("CONFIRM").style(crate::style::text(false)),
+                    )
+                    .width(iced::Length::Shrink)
                     .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
                     .padding(crate::style::PADDING)
                     .style(delete_btn_style)
-                    .on_press(TasksMessage::ReqDelNode(id)),
+                    .on_press(TasksMessage::AckDelNode(id.clone()))
+                } else {
+                    iced::widget::button(crate::icon::delete(delete_svg_style))
+                        .width(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                        .height(iced::Length::Fixed(crate::style::SMALL_BUTTON_SIZE))
+                        .padding(crate::style::PADDING)
+                        .style(delete_btn_style)
+                        .on_press(TasksMessage::ReqDelNode(id.clone()))
+                }
             ]
             .height(iced::Length::Shrink)
             .padding(crate::style::PADDING),

@@ -7,11 +7,18 @@ members = [
 ]
 resolver = "2"
 
+[profile.release]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true
+
 [workspace.dependencies]
 utils = { path = "utils" }
 application = { path = "application" }
 
-tokio         = { version = "1", features = ["full"] }
+tokio         = { version = "1", features = ["fs", "signal"] }
 tokio-scoped = "0.2.0"
 tokio-tungstenite = "0.29.0"
 futures-util = "0.3.32"
