@@ -3,16 +3,15 @@ use std::sync::{Arc, Mutex};
 pub mod paths;
 
 pub trait FromBytes: Sized {
+    fn new() -> Result<Self, Box<dyn std::error::Error>>;
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>>;
 }
 
-impl FromBytes for automerge::AutoCommit {
-    fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(Self::load(bytes)?)
-    }
-}
-
 impl FromBytes for crate::config::Config {
+    fn new() -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(crate::config::Config::default())
+    }
+
     fn from_bytes(bytes: &[u8]) -> Result<Self, Box<dyn std::error::Error>> {
         Ok(serde_json::from_slice(bytes)?)
     }
@@ -43,7 +42,7 @@ impl Storage {
 }
 
 impl Storage {
-    pub fn load_or_default<T: FromBytes + Default>(
+    pub fn load_or_create<T: FromBytes>(
         &self,
         path_suffix: &str,
         storage_kind: paths::StorageKind,
@@ -51,7 +50,7 @@ impl Storage {
         Ok(
             match std::fs::read(self.paths.resolve_path(path_suffix, storage_kind)) {
                 Ok(bytes) => T::from_bytes(&bytes)?,
-                Err(err) if err.kind() == std::io::ErrorKind::NotFound => T::default(),
+                Err(err) if err.kind() == std::io::ErrorKind::NotFound => T::new()?,
                 Err(err) => return Err(Box::new(err)),
             },
         )

@@ -7,9 +7,9 @@ edition = "2024"
 utils.workspace = true
 application.workspace = true
 
+uuid.workspace = true
 automerge.workspace = true
 
 iced = { version = "0.14.0", default-features = false, features = ["wayland", "wgpu", "tokio", "svg"] }
 iced-resizable-split = "1.0.1"
 plotters-iced2 = "0.14.0"
-

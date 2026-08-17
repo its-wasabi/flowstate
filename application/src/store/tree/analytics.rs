@@ -10,7 +10,8 @@ pub struct Snapshot {
 #[derive(Debug, Default)]
 pub struct Analytics {
     timeline: std::collections::BTreeMap<chrono::NaiveDateTime, Snapshot>,
-    last_heads: Vec<automerge::ChangeHash>,
+
+    last_changes: Vec<automerge::ChangeHash>,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -55,10 +56,10 @@ impl Analytics {
         analytics
     }
 
-    pub(super) fn update(&mut self, document: &automerge::Automerge) {
-        let new_changes = document.get_changes(&self.last_heads);
+    pub fn update(&mut self, document: &automerge::Automerge) -> crate::store::error::Result<()> {
+        let new_changes = document.get_changes(&self.last_changes);
         if new_changes.is_empty() {
-            return;
+            return Ok(());
         }
 
         let time_of_earliest_change = new_changes
@@ -70,8 +71,10 @@ impl Analytics {
         if let Some(start_time) = time_of_earliest_change {
             self.rebuild_from_time(document, start_time);
         } else {
-            self.last_heads = document.get_heads();
+            self.last_changes = document.get_heads();
         }
+
+        Ok(())
     }
 
     fn rebuild_from_time(
@@ -97,7 +100,7 @@ impl Analytics {
                 self.timeline.insert(hour, Snapshot { completed, total });
             }
         }
-        self.last_heads = document.get_heads();
+        self.last_changes = document.get_heads();
     }
 
     fn fast_sum_progress(document: &automerge::Automerge) -> (u32, u32) {
@@ -124,7 +127,7 @@ impl Analytics {
                 };
             }
 
-            if let Ok(Some((_, list_id))) = document.get(&id, super::CHILDREN) {
+            if let Ok(Some((_, list_id))) = document.get(&id, super::NODES) {
                 stack.extend((0..document.length(&list_id)).filter_map(|idx| {
                     match document.get(&list_id, idx) {
                         Ok(Some((automerge::Value::Object(automerge::ObjType::Map), child_id))) => {
@@ -182,5 +185,57 @@ impl Analytics {
                 (date_time, delta)
             })
             .collect()
+    }
+}
+
+pub struct Line<X, Y> {
+    pub points: Vec<(X, Y)>,
+}
+
+impl<X: AxisValue, Y: AxisValue> Line<X, Y> {
+    pub fn new(points: impl IntoIterator<Item = (X, Y)>) -> Self {
+        Self {
+            points: points.into_iter().collect(),
+        }
+    }
+}
+
+pub trait AxisValue: std::fmt::Display + Clone {
+    type Value: std::fmt::Display;
+
+    fn to(self) -> Self::Value;
+    fn from(val: Self::Value) -> Option<Self>;
+}
+
+impl AxisValue for f32 {
+    type Value = f32;
+    fn to(self) -> Self::Value {
+        self
+    }
+
+    fn from(val: Self::Value) -> Option<Self> {
+        Some(val)
+    }
+}
+
+impl AxisValue for u32 {
+    type Value = u32;
+    fn to(self) -> Self::Value {
+        self
+    }
+
+    fn from(val: Self::Value) -> Option<Self> {
+        Some(val)
+    }
+}
+
+impl AxisValue for chrono::NaiveDate {
+    type Value = u32;
+    fn to(self) -> Self::Value {
+        todo!()
+    }
+
+    fn from(_val: Self::Value) -> Option<Self> {
+        todo!()
     }
 }

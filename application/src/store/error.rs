@@ -4,9 +4,8 @@ pub type Result<T> = std::result::Result<T, TreeError>;
 pub enum TreeError {
     MissingRoot,
     MissingProperty,
-    // TODO: Remove
-    InvalidNodeType,
-    InvalidValue,
+    InvalidValueType,
+    ValueOverflow(std::num::TryFromIntError),
     Automerge(automerge::AutomergeError),
 }
 
@@ -19,11 +18,11 @@ impl std::fmt::Display for TreeError {
             Self::MissingProperty => {
                 write!(fmt, "missing required property")
             }
-            Self::InvalidNodeType => {
-                write!(fmt, "invalid node type")
-            }
-            Self::InvalidValue => {
+            Self::InvalidValueType => {
                 write!(fmt, "invalid value")
+            }
+            Self::ValueOverflow(conversion_error) => {
+                write!(fmt, "value overflow: {conversion_error}")
             }
             Self::Automerge(err) => {
                 write!(fmt, "automerge error: {err}")

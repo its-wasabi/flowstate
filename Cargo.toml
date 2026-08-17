@@ -26,4 +26,5 @@ futures-util = "0.3.32"
 serde         = { version = "1", features = ["derive"] }
 serde_json    = "1"
 
+uuid = { version = "1.24.0", default-features = false, features = ["std", "v7"] }
 automerge = "0.9.0"

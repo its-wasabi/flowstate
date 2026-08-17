@@ -42,9 +42,8 @@ trait Display {
         iced::Subscription::none()
     }
 
-    fn view_center(&self, core: &application::Core) -> iced::Element<'_, Self::Message>;
-
-    fn view_aside(&self, core: &application::Core) -> iced::Element<'_, Self::Message>;
+    fn view_center<'a>(&'a self, core: &'a application::Core) -> iced::Element<'a, Self::Message>;
+    fn view_aside<'a>(&'a self, core: &'a application::Core) -> iced::Element<'a, Self::Message>;
 }
 
 impl Tab {
@@ -92,7 +91,9 @@ impl App {
         self.tab = tab;
     }
 
-    fn get_current_tab(&self) -> (iced::Element<'_, AppMessage>, iced::Element<'_, AppMessage>) {
+    fn get_current_tab<'a>(
+        &'a self,
+    ) -> (iced::Element<'a, AppMessage>, iced::Element<'a, AppMessage>) {
         match self.tab {
             Tab::Tasks => (
                 self.tasks
@@ -128,7 +129,7 @@ impl App {
             tab: Tab::default(),
             split_state: iced_resizable_split::State::new(0.3, 0.24, 0.8),
 
-            tasks: content::Tasks::new(),
+            tasks: content::Tasks::default(),
             stats: content::Stats::new(),
             config: content::History::new(),
 
