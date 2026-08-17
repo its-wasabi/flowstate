@@ -263,29 +263,28 @@ impl Tree {
             .get(&nodes_map_id, uuid.to_string())?
             .ok_or(super::error::TreeError::MissingProperty)?;
 
-        // Pobierz total
         let (total_val, _) = transaction
             .get(&node_id, NODE_TASK_TOTAL)?
             .ok_or(super::error::TreeError::MissingProperty)?;
-        let total = total_val
-            .to_i64()
-            .ok_or(super::error::TreeError::InvalidValueType)?
-            .clamp(0, u32::MAX as i64) as u32;
+        let total = progress::Total::from(
+            total_val
+                .to_i64()
+                .ok_or(super::error::TreeError::InvalidValueType)?,
+        );
 
-        // Pobierz aktualny completed
         let (completed_val, _) = transaction
             .get(&node_id, NODE_TASK_COMPLETED)?
             .ok_or(super::error::TreeError::MissingProperty)?;
-        let current = completed_val.to_i64().unwrap_or(0);
+        let current_completed = progress::Completed::from_i64(
+            completed_val
+                .to_i64()
+                .ok_or(super::error::TreeError::InvalidValueType)?,
+            total,
+        );
 
-        // Oblicz nową wartość z clampowaniem
-        let would_be = current.saturating_add(by);
-        let target = would_be.clamp(0, total as i64);
+        let updated = current_completed.change_by(by, total);
+        let delta = updated.value() as i64 - current_completed.value() as i64;
 
-        // Oblicz faktyczną deltę
-        let delta = target - current;
-
-        // Zastosuj TYLKO jeśli delta != 0
         if delta != 0 {
             transaction.increment(&node_id, NODE_TASK_COMPLETED, delta)?;
         }
@@ -308,31 +307,28 @@ impl Tree {
             .get(&nodes_map_id, uuid.to_string())?
             .ok_or(super::error::TreeError::MissingProperty)?;
 
-        // Pobierz obecny total
         let (total_val, _) = transaction
             .get(&node_id, NODE_TASK_TOTAL)?
             .ok_or(super::error::TreeError::MissingProperty)?;
-        let current_total = total_val
-            .to_i64()
-            .ok_or(super::error::TreeError::InvalidValueType)?
-            .clamp(0, u32::MAX as i64) as u32;
+        let current_total = progress::Total::from(
+            total_val
+                .to_i64()
+                .ok_or(super::error::TreeError::InvalidValueType)?,
+        );
 
-        // Oblicz nowy total
-        let new_total = current_total as i64 + by;
-        let new_total = new_total.clamp(0, u32::MAX as i64) as u32;
+        let new_total = current_total.change_by(by);
+        transaction.put(&node_id, NODE_TASK_TOTAL, new_total.value())?;
 
-        // Total: put() - last-write-wins
-        transaction.put(&node_id, NODE_TASK_TOTAL, new_total)?;
-
-        // Pobierz completed i clampuj jeśli trzeba
         let (completed_val, _) = transaction
             .get(&node_id, NODE_TASK_COMPLETED)?
             .ok_or(super::error::TreeError::MissingProperty)?;
-        let current_completed = completed_val.to_i64().unwrap_or(0);
+        let raw_completed = completed_val.to_i64().unwrap_or(0);
 
-        // Jeśli completed > nowy total, zmniejsz completed
-        if current_completed > new_total as i64 {
-            let delta = new_total as i64 - current_completed;
+        let constrained_completed = progress::Completed::from_i64(raw_completed, new_total);
+        let delta = constrained_completed.value() as i64 - raw_completed;
+
+        // If the new Total caused Completed to shrink, delta will be negative
+        if delta != 0 {
             transaction.increment(&node_id, NODE_TASK_COMPLETED, delta)?;
         }
 

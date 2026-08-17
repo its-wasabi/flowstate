@@ -3,16 +3,26 @@
 pub struct Total(u32);
 
 impl Total {
-    pub fn new(value: u32) -> Self {
+    #[must_use]
+    pub const fn new(value: u32) -> Self {
         Self(value)
     }
 
-    pub fn value(self) -> u32 {
+    #[must_use]
+    pub const fn value(self) -> u32 {
         self.0
     }
 
+    #[must_use]
     pub fn change_by(self, by: i64) -> Self {
-        Self((self.value() as i64).saturating_add(by).max(0) as u32)
+        let new_val = i64::from(self.0).saturating_add(by).max(0);
+        Self(new_val.try_into().unwrap_or(u32::MAX))
+    }
+}
+
+impl From<i64> for Total {
+    fn from(value: i64) -> Self {
+        Self(value.clamp(0, u32::MAX as i64) as u32)
     }
 }
 
@@ -22,31 +32,36 @@ impl Default for Total {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(transparent)]
 pub struct Completed(u32);
 
 impl Completed {
+    #[must_use]
     pub fn new(value: u32, total: Total) -> Self {
         Self(value.min(total.0))
     }
 
-    pub fn value(self) -> u32 {
+    pub(super) fn from_i64(value: i64, total: Total) -> Self {
+        let safe_val: u32 = value
+            .clamp(0, i64::from(u32::MAX))
+            .try_into()
+            .unwrap_or(u32::MAX);
+        Self::new(safe_val, total)
+    }
+
+    #[must_use]
+    pub const fn value(self) -> u32 {
         self.0
     }
 
+    #[must_use]
     pub fn change_by(self, by: i64, total: Total) -> Self {
-        Self(
-            (self.value() as i64)
-                .saturating_add(by)
-                .clamp(0, total.0 as i64) as u32,
-        )
-    }
-}
+        let new_value = i64::from(self.0)
+            .saturating_add(by)
+            .clamp(0, i64::from(total.0));
 
-impl Default for Completed {
-    fn default() -> Self {
-        Self(0)
+        Self(new_value.try_into().unwrap_or(total.0))
     }
 }
 
@@ -57,14 +72,17 @@ pub struct Progress {
 }
 
 impl Progress {
-    pub fn new(total: Total, completed: Completed) -> Self {
+    #[must_use]
+    pub const fn new(total: Total, completed: Completed) -> Self {
         Self { total, completed }
     }
 
+    #[must_use]
     pub fn zero() -> Self {
         Self::from_values(0, 0)
     }
 
+    #[must_use]
     pub fn from_values(total: u32, completed: u32) -> Self {
         let total = Total::new(total);
         let completed = Completed::new(completed, total);
@@ -83,8 +101,8 @@ impl Progress {
                 continue;
             }
 
-            let c_num = child.completed.0 as u128;
-            let c_den = child.total.0 as u128;
+            let c_num = u128::from(child.completed.0);
+            let c_den = u128::from(child.total.0);
 
             let new_num = num * c_den + c_num * den;
             let new_den = den * c_den;
@@ -104,20 +122,23 @@ impl Progress {
         Self::from_values((final_den / g) as u32, (num / g) as u32)
     }
 
-    pub fn completed(&self) -> u32 {
+    #[must_use]
+    pub const fn completed(&self) -> u32 {
         self.completed.value()
     }
 
-    pub fn total(&self) -> u32 {
+    #[must_use]
+    pub const fn total(&self) -> u32 {
         self.total.value()
     }
 
+    #[must_use]
     pub fn procentage(&self) -> f32 {
         if self.total.value().eq(&0) {
             return 0.0;
         }
 
-        ((self.completed.value() as f64 * 100.0) / self.total.value() as f64) as f32
+        (self.completed.value() as f32 * 100.0) / (self.total.value() as f32)
     }
 }
 
@@ -131,9 +152,9 @@ impl std::fmt::Display for Progress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let pct = self.procentage();
         if pct.fract() == 0.0 {
-            write!(f, "{:.0}", pct)
+            write!(f, "{pct:.0}")
         } else {
-            write!(f, "{:.2}", pct)
+            write!(f, "{pct:.2}")
         }
     }
 }
