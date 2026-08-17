@@ -4,7 +4,10 @@ pub mod progress;
 mod projection;
 
 use super::ext::TransactionExt;
-use automerge::{ReadDoc, transaction::Transactable};
+use automerge::{
+    ReadDoc,
+    transaction::{self, Transactable},
+};
 
 pub use node::NodeData;
 pub use progress::Progress;
@@ -41,14 +44,14 @@ pub enum Command {
     SpliceNodeName {
         uuid: uuid::Uuid,
         index: usize,
-        delete: usize,
+        delete: isize,
         insert: String,
     },
 
     SpliceNodeDesc {
         uuid: uuid::Uuid,
         index: usize,
-        delete: usize,
+        delete: isize,
         insert: String,
     },
 
@@ -103,7 +106,12 @@ impl Tree {
                 node_data,
             } => Self::add_node(document, parent_uuid, &node_data),
 
-            Command::DelNode { uuid } => self.remove_node(document, &uuid),
+            Command::DelNode { uuid } => {
+                let mut transaction = document.transaction();
+                self.remove_node(&mut transaction, &uuid)?;
+                transaction.commit_with_time();
+                Ok(())
+            }
 
             Command::MoveNode { uuid, to_parent } => todo!(),
 
@@ -112,13 +120,13 @@ impl Tree {
                 index,
                 delete,
                 insert,
-            } => todo!(),
+            } => Self::splice_node_name(document, uuid, index, delete, &insert),
             Command::SpliceNodeDesc {
                 uuid,
                 index,
                 delete,
                 insert,
-            } => todo!(),
+            } => Self::splice_node_desc(document, uuid, index, delete, &insert),
 
             Command::UpdateNodeCompleted { uuid, by } => Self::update_completed(document, uuid, by),
 
@@ -129,16 +137,20 @@ impl Tree {
     }
 
     fn update(&mut self, document: &automerge::Automerge) -> super::error::Result<()> {
-        self.projection.update(document).unwrap();
+        self.projection
+            .update(document)
+            .map_err(|_| super::error::TreeError::MissingProperty)?;
         self.analytics.update(document)?;
 
         Ok(())
     }
 
+    #[must_use]
     pub const fn get_root(&self) -> &[uuid::Uuid] {
         self.projection.nodes_root.as_slice()
     }
 
+    #[must_use]
     pub fn get_parent_uuid(&self, uuid: &uuid::Uuid) -> super::error::Result<&uuid::Uuid> {
         self.projection
             .parent
@@ -146,6 +158,7 @@ impl Tree {
             .ok_or(super::error::TreeError::MissingProperty)
     }
 
+    #[must_use]
     pub fn get_children_uuids(&self, uuid: &uuid::Uuid) -> super::error::Result<&[uuid::Uuid]> {
         self.projection
             .children
@@ -154,6 +167,7 @@ impl Tree {
             .ok_or(super::error::TreeError::MissingProperty)
     }
 
+    #[must_use]
     pub fn get_node(&self, uuid: &uuid::Uuid) -> super::error::Result<&node::NodeData> {
         self.projection
             .node
@@ -161,6 +175,7 @@ impl Tree {
             .ok_or(super::error::TreeError::MissingProperty)
     }
 
+    #[must_use]
     pub fn get_progress(&self, uuid: &uuid::Uuid) -> super::error::Result<&progress::Progress> {
         self.projection
             .progress
@@ -168,6 +183,7 @@ impl Tree {
             .ok_or(super::error::TreeError::MissingProperty)
     }
 
+    #[must_use]
     pub fn has_children(&self, uuid: &uuid::Uuid) -> bool {
         self.projection
             .children
@@ -193,7 +209,6 @@ impl Tree {
             transaction.put(&new_node_id, NODE_PARENT, parent.to_string())?;
         }
 
-        // TODO: handle that manually here
         node_data.apply_data(&mut transaction, &new_node_id)?;
 
         transaction.commit_with_time();
@@ -203,24 +218,20 @@ impl Tree {
 
     fn remove_node(
         &self,
-        document: &mut automerge::Automerge,
+        transaction: &mut automerge::transaction::Transaction,
         uuid: &uuid::Uuid,
     ) -> super::error::Result<()> {
         if let Some(child_uuids) = self.projection.children.get(uuid) {
             for child_uuid in child_uuids {
-                self.remove_node(document, child_uuid);
+                self.remove_node(transaction, child_uuid)?;
             }
-        };
-
-        let mut transaction = document.transaction();
+        }
 
         let (_, nodes_map_id) = transaction
             .get(automerge::ObjId::Root, NODES)?
             .ok_or(super::error::TreeError::MissingRoot)?;
 
         transaction.delete(nodes_map_id, uuid.to_string())?;
-
-        transaction.commit_with_time();
 
         Ok(())
     }
@@ -230,23 +241,23 @@ impl Tree {
     }
 
     pub fn splice_node_name(
-        document: &automerge::Automerge,
+        document: &mut automerge::Automerge,
         uuid: uuid::Uuid,
         index: usize,
-        delete: usize,
+        delete: isize,
         insert: &str,
-    ) {
-        splice_text(document);
+    ) -> super::error::Result<()> {
+        splice_text(document, uuid, NODE_NAME, index, delete, insert)
     }
 
     fn splice_node_desc(
-        document: &automerge::Automerge,
+        document: &mut automerge::Automerge,
         uuid: uuid::Uuid,
         index: usize,
-        delete: usize,
+        delete: isize,
         insert: &str,
-    ) {
-        splice_text(document);
+    ) -> super::error::Result<()> {
+        splice_text(document, uuid, NODE_DESC, index, delete, insert)
     }
 
     fn update_completed(
@@ -325,7 +336,7 @@ impl Tree {
         let raw_completed = completed_val.to_i64().unwrap_or(0);
 
         let constrained_completed = progress::Completed::from_i64(raw_completed, new_total);
-        let delta = constrained_completed.value() as i64 - raw_completed;
+        let delta = i64::from(constrained_completed.value()) - raw_completed;
 
         // If the new Total caused Completed to shrink, delta will be negative
         if delta != 0 {
@@ -379,6 +390,27 @@ impl Tree {
     }
 }
 
-fn splice_text(document: &automerge::Automerge) {
-    todo!()
+fn splice_text(
+    document: &mut automerge::Automerge,
+    uuid: uuid::Uuid,
+    property: &str,
+    index: usize,
+    delete: isize,
+    insert: &str,
+) -> super::error::Result<()> {
+    let mut transaction = document.transaction();
+    let (_, nodes_map_obj_id) = transaction
+        .get(automerge::ObjId::Root, NODES)?
+        .ok_or(super::error::TreeError::MissingProperty)?;
+    let (_, node_obj_id) = transaction
+        .get(nodes_map_obj_id, uuid.to_string())?
+        .ok_or(super::error::TreeError::MissingProperty)?;
+    let (_, text_obj_id) = transaction
+        .get(node_obj_id, property)?
+        .ok_or(super::error::TreeError::MissingProperty)?;
+
+    transaction.splice_text(text_obj_id, index, delete, insert);
+    transaction.commit_with_time();
+
+    Ok(())
 }

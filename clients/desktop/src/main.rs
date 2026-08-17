@@ -177,20 +177,20 @@ impl App {
 
     #[allow(clippy::missing_const_for_fn)]
     fn theme(_self: &Self) -> iced::Theme {
-        iced::Theme::KanagawaLotus
-        // iced::Theme::custom(
-        //     String::from("Midnight"),
-        //     iced::theme::Palette {
-        //         background: iced::Color::BLACK,
-        //         text: iced::Color::WHITE,
-        //         // primary: iced::Color::from_rgb8(198, 167, 97),
-        //         primary: iced::Color::WHITE,
-        //
-        //         success: iced::Color::from_rgb8(0, 255, 136),
-        //         warning: iced::Color::from_rgb8(0, 220, 255),
-        //         danger: iced::Color::from_rgb8(255, 95, 95),
-        //     },
-        // )
+        // iced::Theme::KanagawaLotus
+        iced::Theme::custom(
+            String::from("Midnight"),
+            iced::theme::Palette {
+                background: iced::Color::BLACK,
+                text: iced::Color::WHITE,
+                // primary: iced::Color::from_rgb8(198, 167, 97),
+                primary: iced::Color::WHITE,
+
+                success: iced::Color::from_rgb8(0, 255, 136),
+                warning: iced::Color::from_rgb8(0, 220, 255),
+                danger: iced::Color::from_rgb8(255, 95, 95),
+            },
+        )
     }
 
     fn subscription(&self) -> iced::Subscription<AppMessage> {

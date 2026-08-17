@@ -160,7 +160,7 @@ impl Tasks {
         children: &'a [uuid::Uuid],
     ) -> iced::Element<'a, TasksMessage> {
         iced::widget::column![
-            self.current_node(&uuid, node),
+            self.current_node(uuid, node),
             iced::widget::scrollable(
                 iced::widget::column(
                     children
@@ -182,13 +182,10 @@ impl Tasks {
     }
 
     fn current_node<'a>(
-        &self,
-        uuid: &uuid::Uuid,
-        node: &application::store::tree::NodeData,
+        &'a self,
+        uuid: uuid::Uuid,
+        node: &'a application::store::tree::NodeData,
     ) -> iced::Element<'a, TasksMessage> {
-        let name_id = self.current_node_uuid.clone();
-        let desc_id = self.current_node_uuid.clone();
-
         let (left_btn_style, left_svg_style) =
             crate::style::button_with_icon(crate::style::Variant::Default, true);
 
@@ -228,16 +225,17 @@ impl Tasks {
                         .size(crate::style::BIG_TEXT_SIZE)
                         .padding(0)
                         .align_x(iced::Alignment::Start)
-                        .on_input(move |content| TasksMessage::EditStore(
-                            application::store::Command::Tree(
+                        .on_input(move |content| {
+                            let (index, delete, insert) = compute_splice(&node.name, &content);
+                            TasksMessage::EditStore(application::store::Command::Tree(
                                 application::store::tree::Command::SpliceNodeName {
-                                    uuid: todo!(),
-                                    index: todo!(),
-                                    delete: todo!(),
-                                    insert: todo!(),
-                                }
-                            )
-                        ))
+                                    uuid,
+                                    index,
+                                    delete,
+                                    insert,
+                                },
+                            ))
+                        })
                         .style(crate::style::text_input),
                     iced::widget::text_input("DESC", &node.desc)
                         .width(iced::Length::Fill)
@@ -247,16 +245,17 @@ impl Tasks {
                         .size(crate::style::BIG_TEXT_SIZE)
                         .padding(0)
                         .align_x(iced::Alignment::Start)
-                        .on_input(move |content| TasksMessage::EditStore(
-                            application::store::Command::Tree(
+                        .on_input(move |content| {
+                            let (index, delete, insert) = compute_splice(&node.desc, &content);
+                            TasksMessage::EditStore(application::store::Command::Tree(
                                 application::store::tree::Command::SpliceNodeDesc {
-                                    uuid: todo!(),
-                                    index: todo!(),
-                                    delete: todo!(),
-                                    insert: todo!(),
-                                }
-                            )
-                        ))
+                                    uuid,
+                                    index,
+                                    delete,
+                                    insert,
+                                },
+                            ))
+                        })
                         .style(crate::style::text_input),
                 ]
             ]
@@ -405,16 +404,17 @@ impl Tasks {
                     .size(crate::style::BIG_TEXT_SIZE)
                     .padding(0)
                     .align_x(iced::Alignment::Start)
-                    .on_input(move |content| TasksMessage::EditStore(
-                        application::store::Command::Tree(
+                    .on_input(move |content| {
+                        let (index, delete, insert) = compute_splice(&node.name, &content);
+                        TasksMessage::EditStore(application::store::Command::Tree(
                             application::store::tree::Command::SpliceNodeName {
-                                uuid: todo!(),
-                                index: todo!(),
-                                delete: todo!(),
-                                insert: todo!(),
-                            }
-                        )
-                    ))
+                                uuid,
+                                index,
+                                delete,
+                                insert,
+                            },
+                        ))
+                    })
                     .style(crate::style::text_input),
                 is_leaf.then(|| {
                     let (minus_btn_style, minus_svg_style) =
@@ -502,4 +502,32 @@ impl Tasks {
         .height(iced::Length::Fixed(26.0))
         .into()
     }
+}
+
+fn compute_splice(old: &str, new: &str) -> (usize, isize, String) {
+    let old_chars: Vec<char> = old.chars().collect();
+    let new_chars: Vec<char> = new.chars().collect();
+
+    let mut prefix_len = 0;
+    let min_len = std::cmp::min(old_chars.len(), new_chars.len());
+    while prefix_len < min_len && old_chars[prefix_len] == new_chars[prefix_len] {
+        prefix_len += 1;
+    }
+
+    let mut suffix_len = 0;
+    let max_suffix = std::cmp::min(old_chars.len() - prefix_len, new_chars.len() - prefix_len);
+    while suffix_len < max_suffix
+        && old_chars[old_chars.len() - 1 - suffix_len]
+            == new_chars[new_chars.len() - 1 - suffix_len]
+    {
+        suffix_len += 1;
+    }
+
+    let index = prefix_len;
+    let delete = old_chars.len() - prefix_len - suffix_len;
+    let insert: String = new_chars[prefix_len..new_chars.len() - suffix_len]
+        .iter()
+        .collect();
+
+    (index, delete as isize, insert)
 }

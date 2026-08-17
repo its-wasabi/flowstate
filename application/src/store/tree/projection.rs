@@ -3,7 +3,7 @@ use automerge::ReadDoc;
 #[derive(Debug)]
 pub struct Projection {
     last_heads: Vec<automerge::ChangeHash>,
-    nodes_obj_id: automerge::ObjId,
+    nodes_map_obj_id: automerge::ObjId,
 
     pub(super) node: rustc_hash::FxHashMap<uuid::Uuid, super::node::NodeData>,
     pub(super) progress: rustc_hash::FxHashMap<uuid::Uuid, super::progress::Progress>,
@@ -21,7 +21,7 @@ impl Projection {
 
         let mut projection = Self {
             last_heads: Vec::new(),
-            nodes_obj_id: nodes_root_id,
+            nodes_map_obj_id: nodes_root_id,
 
             node: rustc_hash::FxHashMap::default(),
             progress: rustc_hash::FxHashMap::default(),
@@ -31,12 +31,12 @@ impl Projection {
             children: rustc_hash::FxHashMap::default(),
         };
 
-        let nodes_map_range = document.map_range(&projection.nodes_obj_id, ..);
+        let nodes_map_range = document.map_range(&projection.nodes_map_obj_id, ..);
         for range_item in nodes_map_range {
             let uuid_str = range_item.key.as_ref();
             let uuid = uuid::Uuid::parse_str(uuid_str)?;
             let (_, node_id) = document
-                .get(&projection.nodes_obj_id, uuid_str)?
+                .get(&projection.nodes_map_obj_id, uuid_str)?
                 .ok_or(crate::store::error::TreeError::MissingProperty)?;
             let node_data = super::node::NodeData::from_id(document, &node_id)?;
 
@@ -103,13 +103,15 @@ impl Projection {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+// TODO: Remove PatchEffect entirely cause RebuildAll variant is unused anyway
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum PatchEffect {
     RebuildAll,
     Track(ChangeType),
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+// TODO: You should split Metadata into Name and Desc
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum ChangeType {
     NodeAdded(uuid::Uuid),
     NodeRemoved(uuid::Uuid),
@@ -128,8 +130,12 @@ impl Projection {
             return Ok(());
         }
 
-        let patches =
-            document.diff_obj(&self.nodes_obj_id, &self.last_heads, &current_heads, true)?;
+        let patches = document.diff_obj(
+            &self.nodes_map_obj_id,
+            &self.last_heads,
+            &current_heads,
+            true,
+        )?;
 
         let effects = patches
             .into_iter()
@@ -157,9 +163,19 @@ impl Projection {
         &self,
         patch: &automerge::patches::Patch,
     ) -> Result<Option<PatchEffect>, Box<dyn std::error::Error>> {
+        let extract_uuid = || -> Option<uuid::Uuid> {
+            patch.path.get(1).and_then(|(_, prop)| {
+                if let automerge::Prop::Map(uuid_str) = prop {
+                    uuid::Uuid::parse_str(uuid_str).ok()
+                } else {
+                    None
+                }
+            })
+        };
+
         match (&patch.obj, &patch.action) {
             (obj_id, automerge::PatchAction::PutMap { key, .. })
-                if *obj_id == self.nodes_obj_id =>
+                if *obj_id == self.nodes_map_obj_id =>
             {
                 Ok(Some(PatchEffect::Track(ChangeType::NodeAdded(
                     uuid::Uuid::parse_str(&key)?,
@@ -167,7 +183,7 @@ impl Projection {
             }
 
             (obj_id, automerge::PatchAction::DeleteMap { key, .. })
-                if *obj_id == self.nodes_obj_id =>
+                if *obj_id == self.nodes_map_obj_id =>
             {
                 Ok(Some(PatchEffect::Track(ChangeType::NodeRemoved(
                     uuid::Uuid::parse_str(&key)?,
@@ -181,6 +197,18 @@ impl Projection {
                     || key == super::NODE_DESC
                     || key == super::NODE_PARENT =>
             {
+                Ok(None)
+            }
+
+            (
+                _,
+                automerge::PatchAction::SpliceText { .. }
+                | automerge::PatchAction::DeleteSeq { .. },
+            ) => {
+                if let Some(uuid) = extract_uuid() {
+                    return Ok(Some(PatchEffect::Track(ChangeType::MetadataChanged(uuid))));
+                }
+
                 Ok(None)
             }
 
@@ -334,7 +362,7 @@ impl Projection {
         uuid: uuid::Uuid,
     ) -> crate::store::error::Result<()> {
         let (_, node_id) = document
-            .get(&self.nodes_obj_id, uuid.to_string())?
+            .get(&self.nodes_map_obj_id, uuid.to_string())?
             .ok_or(crate::store::error::TreeError::MissingProperty)?;
 
         let node_data = super::node::NodeData::from_id(document, &node_id)?;
@@ -399,7 +427,7 @@ impl Projection {
 
         // 2. Attach to new location
         let (_, node_id) = document
-            .get(&self.nodes_obj_id, uuid.to_string())?
+            .get(&self.nodes_map_obj_id, uuid.to_string())?
             .ok_or(crate::store::error::TreeError::MissingProperty)?;
 
         if let Some((parent_val, _)) = document.get(&node_id, super::NODE_PARENT)? {
@@ -426,7 +454,7 @@ impl Projection {
         uuid: uuid::Uuid,
     ) -> crate::store::error::Result<()> {
         let (_, node_id) = document
-            .get(&self.nodes_obj_id, uuid.to_string())?
+            .get(&self.nodes_map_obj_id, uuid.to_string())?
             .ok_or(crate::store::error::TreeError::MissingProperty)?;
 
         let node_data = super::node::NodeData::from_id(document, &node_id)?;
@@ -444,7 +472,7 @@ impl Projection {
         uuid: uuid::Uuid,
     ) -> crate::store::error::Result<()> {
         let (_, node_id) = document
-            .get(&self.nodes_obj_id, uuid.to_string())?
+            .get(&self.nodes_map_obj_id, uuid.to_string())?
             .ok_or(crate::store::error::TreeError::MissingProperty)?;
 
         // Read new progress directly from Automerge
