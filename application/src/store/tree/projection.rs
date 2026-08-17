@@ -103,7 +103,7 @@ impl Projection {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 enum PatchEffect {
     RebuildAll,
     Track(ChangeType),
@@ -131,16 +131,20 @@ impl Projection {
         let patches =
             document.diff_obj(&self.nodes_obj_id, &self.last_heads, &current_heads, true)?;
 
-        for patch in patches {
-            println!("{patch:#?}");
-            if let Some(effect) = self.classify_patch(&patch)? {
-                println!("{effect:?}");
-                if let Err(error) = self.apply_effect(document, effect) {
-                    // TODO: Think how to handle errors in the way to not break the projection and be able
-                    // to handle that and maybe fix or work with small error
-                    eprintln!("(139) Error: {error}");
-                    *self = Self::new(document).unwrap();
-                };
+        let effects = patches
+            .into_iter()
+            .map(|patch| self.classify_patch(&patch))
+            .collect::<Result<Vec<_>, _>>()?
+            .into_iter()
+            .flatten()
+            .collect::<rustc_hash::FxHashSet<_>>();
+
+        for effect in effects {
+            if let Err(error) = self.apply_effect(document, effect) {
+                // TODO: Think how to handle errors in the way to not break the projection and be able
+                // to handle that and maybe fix or work with small error
+                eprintln!("(REBUILDING) Error: {error}");
+                *self = Self::new(document)?;
             }
         }
 
