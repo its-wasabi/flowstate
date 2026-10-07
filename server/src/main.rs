@@ -29,9 +29,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     while let Ok((tcp_stream, remote_socket_addr)) = listener.accept().await {
         println!("\x1b[38;5;2m[SERVER]\x1b[0m Connection request from: {remote_socket_addr}");
 
-        let state = std::sync::Arc::clone(&state);
-
-        if let Err(error) = handle_connection(state, tcp_stream).await {
+        if let Err(error) = handle_connection(std::sync::Arc::clone(&state), tcp_stream).await {
             eprintln!("\x1b[38;5;1m[SERVER]\x1b[0m {error}");
         }
     }
@@ -45,25 +43,17 @@ async fn handle_connection(
 ) -> Result<(), Box<dyn std::error::Error>> {
     use futures_util::StreamExt;
     let (mut ws_tx, mut ws_rx) = tokio_tungstenite::accept_async(tcp_stream).await?.split();
-    let mut sync_state = automerge::sync::State::default();
     let mut sync_event_rx = state.read().await.sync_event_tx.subscribe();
 
+    let mut sync_state = automerge::sync::State::default();
     send_sync_message(&state, &mut sync_state, &mut ws_tx).await?;
 
     loop {
         tokio::select! {
             Some(Ok(msg)) = ws_rx.next() => {
                 match msg {
-                    tokio_tungstenite::tungstenite::Message::Binary(sync_msg) => {
-                        if let Ok(sync_msg) = automerge::sync::Message::decode(&sync_msg) {
-                            recv_sync_message(&state, &mut sync_state, sync_msg).await?;
-                            send_sync_event(&state).await?;
-                            send_sync_message(&state, &mut sync_state, &mut ws_tx).await?;
-                        }
-                    },
-
+                    tokio_tungstenite::tungstenite::Message::Binary(sync_msg) => handle_binary_message(&state,&mut sync_state, &sync_msg, &mut ws_tx).await?,
                     tokio_tungstenite::tungstenite::Message::Text(_) => todo!("Handle future features"),
-
                     tokio_tungstenite::tungstenite::Message::Close(close_frame) => break,
                     _ => {},
                 }
@@ -73,6 +63,25 @@ async fn handle_connection(
                 send_sync_message(&state, &mut sync_state, &mut ws_tx).await?;
             }
         }
+    }
+
+    Ok(())
+}
+
+async fn handle_binary_message(
+    state: &std::sync::Arc<tokio::sync::RwLock<State>>,
+    sync_state: &mut automerge::sync::State,
+    sync_msg: &tokio_tungstenite::tungstenite::Bytes,
+    ws_tx: &mut futures_util::stream::SplitSink<
+        tokio_tungstenite::WebSocketStream<tokio::net::TcpStream>,
+        tokio_tungstenite::tungstenite::Message,
+    >,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if let Ok(sync_msg) = automerge::sync::Message::decode(sync_msg) {
+        recv_sync_message(state, sync_state, sync_msg).await?;
+        send_sync_event(state).await?;
+        // TODO: Shouldn't you do that optionally here only if something actually changed
+        send_sync_message(state, sync_state, ws_tx).await?;
     }
 
     Ok(())

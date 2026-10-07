@@ -5,6 +5,7 @@
 
 mod config;
 mod error;
+// TODO: Move io to utils crate
 mod io;
 mod peer;
 pub mod store;
